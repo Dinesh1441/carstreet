@@ -1,0 +1,5 @@
+Brand,Model,Variant,Color,Car Type,Manufacturing Year,Registration Year,Number of Owners,Kilometers Driven,Fuel Type,Registration State,Registration Number,Insurance Validity,Insurance Type,Warranty Validity,Status,Asking Price
+"Toyota","Camry","XLE","Silver","Sedan","2020","2020","1","45000","Petrol","California","ABC123","2024-05-15","Comprehensive","2023-12-31","Available","22000"
+"Honda","Civic","Touring","Red","Sedan","2021","2021","1","22000","Petrol","New York","XYZ789","2024-08-20","Third Party","2024-06-30","Available","24500"
+"Tesla","Model 3","Performance","Midnight Silver","Sedan","2022","2022","1","15000","Electric","California","TES123","2025-01-10","Comprehensive","2026-05-30","Available","52000"
+"Ford","F-150","Lariat","Black","Pickup","2019","2019","2","78000","Diesel","Texas","FORD150","2023-11-30","Third Party","2022-05-15","Pending","35000"
