@@ -3,10 +3,11 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
+  const backend_url = import.meta.env.VITE_BACKEND_URL;
 
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  return useContext(AuthContext); 
 };
 
 export const AuthProvider = ({ children }) => {
@@ -21,7 +22,7 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     
     if (token) {
-      fetch('http://localhost:5000/api/users/auth', {
+      fetch(`${backend_url}/api/users/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json', 
@@ -58,7 +59,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch('http://localhost:5000/api/users/login', {
+      const response = await fetch(`${backend_url}/api/users/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
