@@ -473,6 +473,7 @@ export const createInsuranceOpportunity = async (req, res) => {
             });
         }
 
+        const createdBy = req.user ? req.user.id : null; // Use req.user.id if available
         const insuranceOpportunity = new InsuranceOpportunity({
             name,
             email,
@@ -487,7 +488,8 @@ export const createInsuranceOpportunity = async (req, res) => {
             insuranceTerm,
             insuranceType,
             insuranceExpiryDate: insuranceExpiryDate || undefined,
-            leadId
+            leadId,
+            createdBy
         });
 
         await insuranceOpportunity.save();
@@ -502,12 +504,12 @@ export const createInsuranceOpportunity = async (req, res) => {
             user: owner,
             type: 'insurance_opportunity_created',
             content: `Insurance opportunity created for "${name}"`,
+            leadId : leadId,
             contentId: insuranceOpportunity._id,
             metadata: {
                 name,
                 email,
                 phoneNumber,
-                owner,
                 status: status || 'Open',
                 stage,
                 currentInsuranceValidity,
@@ -515,7 +517,8 @@ export const createInsuranceOpportunity = async (req, res) => {
                 costOfInsurance: costOfInsurance ? parseFloat(costOfInsurance) : undefined,
                 insuranceTerm,
                 insuranceType,
-                leadId
+                owner: populatedOpportunity.owner.username,
+                ownerEmail: populatedOpportunity.owner.email
             }
         });
 
@@ -592,6 +595,8 @@ export const getAllInsuranceOpportunities = async (req, res) => {
         // Build sort object
         const sort = {};
         sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+        if(req.user.role === 'Sales Executive') filter.createdBy = req.user.id;
 
         const opportunities = await InsuranceOpportunity.find(filter)
             .populate('owner', 'username email')
@@ -736,22 +741,15 @@ export const updateInsuranceOpportunity = async (req, res) => {
             type: 'insurance_opportunity_updated',
             content: `Insurance opportunity updated for "${updatedOpportunity.name}"`,
             contentId: updatedOpportunity._id,
+            leadId: updatedOpportunity.leadId,
             metadata: {
-                previousData: {
-                    name: currentOpportunity.name,
-                    status: currentOpportunity.status,
-                    stage: currentOpportunity.stage,
-                    currentInsuranceValidity: currentOpportunity.currentInsuranceValidity,
-                    costOfInsurance: currentOpportunity.costOfInsurance
-                },
-                updatedData: {
-                    name: updatedOpportunity.name,
-                    status: updatedOpportunity.status,
-                    stage: updatedOpportunity.stage,
-                    currentInsuranceValidity: updatedOpportunity.currentInsuranceValidity,
-                    costOfInsurance: updatedOpportunity.costOfInsurance
-                },
-                changes: Object.keys(updateData)
+                name: updatedOpportunity.name,
+                email: updatedOpportunity.email,
+                phoneNumber: updatedOpportunity.phoneNumber,
+                stage: updatedOpportunity.stage,
+                currentInsuranceValidity: updatedOpportunity.currentInsuranceValidity,
+                costOfInsurance: updatedOpportunity.costOfInsurance,
+                status: updatedOpportunity.status,
             }
         });
 
@@ -816,6 +814,7 @@ export const deleteInsuranceOpportunity = async (req, res) => {
             type: 'insurance_opportunity_deleted',
             content: `Insurance opportunity deleted for "${deletedOpportunity.name}"`,
             contentId: deletedOpportunity._id,
+            leadId: deletedOpportunity.leadId,
             metadata: {
                 name: deletedOpportunity.name,
                 email: deletedOpportunity.email,

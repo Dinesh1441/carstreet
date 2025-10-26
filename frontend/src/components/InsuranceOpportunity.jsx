@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronDown, DollarSign, Shield, FileText, User, Mail, Phone, Calendar, Check } from 'lucide-react';
+import { X, ChevronDown, IndianRupee, Shield, FileText, User, Mail, Phone, Calendar, Check } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const InsuranceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead }) => {
   const [formData, setFormData] = useState({
@@ -29,6 +30,7 @@ const InsuranceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false,
   const [submitting, setSubmitting] = useState(false);
   const [showDocumentsDropdown, setShowDocumentsDropdown] = useState(false);
   const documentsDropdownRef = useRef(null);
+  const { token } = useAuth();
 
   const backend_url = import.meta.env.VITE_BACKEND_URL;
 
@@ -80,7 +82,7 @@ const InsuranceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false,
     const fetchOwners = async () => {
       try {
         setLoading(true);
-        const ownersResponse = await axios.get(`${backend_url}/api/users/all`);
+        const ownersResponse = await axios.get(`${backend_url}/api/users/all`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (ownersResponse.data.status === 'success') {
           setOwners(ownersResponse.data.data || []);
         }
@@ -204,15 +206,18 @@ const InsuranceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false,
       
       if (isEdit && opportunity) {
         // Update existing opportunity
-        response = await axios.put(`${backend_url}/api/insuranceopportunity/${opportunity._id}`, opportunityData);
+        response = await axios.put(`${backend_url}/api/insuranceopportunity/${opportunity._id}`, opportunityData, { headers: { 'Authorization': `Bearer ${token}` } });
       } else {
         // Create new opportunity
-        response = await axios.post(`${backend_url}/api/insuranceopportunity/add`, opportunityData);
+        response = await axios.post(`${backend_url}/api/insuranceopportunity/add`, opportunityData, { headers: { 'Authorization': `Bearer ${token}` } });
       }
       
       if (response.data.status === 'success') {
         toast.success(`Insurance opportunity ${isEdit ? 'updated' : 'created'} successfully`);
-        onSuccess();
+        if (onSuccess) {
+          onSuccess();
+        }
+        onClose();
       } else {
         toast.error(response.data.message || `Failed to ${isEdit ? 'update' : 'create'} insurance opportunity`);
       }
@@ -442,7 +447,7 @@ const InsuranceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false,
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cost of Insurance</label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                   <input
                     type="number"
                     name="costOfInsurance"

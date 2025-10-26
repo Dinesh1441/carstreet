@@ -114,7 +114,13 @@ const financeOpportunitySchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Lead",
         required: true,
-    }
+    },
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        }
+    
 }, { timestamps: true });
 
 const FinanceOpportunity = mongoose.models.FinanceOpportunity || mongoose.model("FinanceOpportunity", financeOpportunitySchema);

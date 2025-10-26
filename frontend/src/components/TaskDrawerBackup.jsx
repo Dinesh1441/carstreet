@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Calendar, Clock, ChevronDown, Check, Search } from 'lucide-react';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 const TaskDrawer = ({ onClose, lead }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const {token} = useAuth();
   const [task, setTask] = useState({
     taskType: 'Call Back',
     owner: '',
@@ -45,6 +47,8 @@ const TaskDrawer = ({ onClose, lead }) => {
     organizer: useRef(null)
   };
 
+  const backend_url = import.meta.env.VITE_BACKEND_URL;
+
   const taskTypes = ['Call Back', 'Follow-Up', 'Inspection', 'Negotiation', 'Pitch-Sell opportunity', 'Other'];
   const opportunities = ['Opportunity 1', 'Opportunity 2', 'Opportunity 3'];
 
@@ -53,7 +57,7 @@ const TaskDrawer = ({ onClose, lead }) => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:3000/api/users/all');
+        const response = await axios.get(`${backend_url}/api/users/all`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (response.data && response.data.data) {
           setUsers(response.data.data);
           

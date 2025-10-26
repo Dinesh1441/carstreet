@@ -695,6 +695,7 @@ import mongoose from "mongoose";
 // Create a new buy opportunity
 export const createBuyOpportunity = async (req, res) => {
     try {
+        
         const {
             name,
             email,
@@ -727,6 +728,9 @@ export const createBuyOpportunity = async (req, res) => {
             leadId
         } = req.body;
 
+       
+        const createdBy = req.user.id || ''; // Assuming user ID is passed in the request body;
+        
         // Validate required fields
         if (!name || !owner || !source || !stage || !make || !model || !finance || !rto || !insurance || !leadId) {
             return res.status(400).json({ 
@@ -764,7 +768,8 @@ export const createBuyOpportunity = async (req, res) => {
             rtoRequiredState,
             rtoProcess,
             insurance,
-            leadId
+            leadId,
+            createdBy
         });
 
         await newBuyOpportunity.save();
@@ -772,47 +777,47 @@ export const createBuyOpportunity = async (req, res) => {
         // Populate the saved opportunity
         const populatedOpportunity = await BuyOpportunity.findById(newBuyOpportunity._id)
             .populate('owner', 'username email')
-            .populate('make', 'name')
+            .populate('make', 'make')
             .populate('model', 'name')
             .populate('variant', 'name')
             .populate('car', 'name')
             .populate('leadId', 'name lastName email phone');
 
+        console.log("Populated Opportunity:", populatedOpportunity);
+
+        // Safe access to populated fields with fallbacks
+        const getSafeValue = (obj, property, fallback = '') => {
+            return obj && obj[property] ? obj[property] : fallback;
+        };
+
         // Create activity for opportunity creation
         const activity = new Activity({
             user: owner,
             type: 'buy_opportunity_created',
-            content: `Buy opportunity created for "${name}"`,
+            content: `Buy opportunity created for "${populatedOpportunity.name}"`,
+            leadId: leadId,
             contentId: newBuyOpportunity._id,
             metadata: {
-                email,
-                phoneNumber,
-                car,
-                owner,
-                source,
-                status,
-                stage,
-                year,
-                minBudget,
-                maxBudget,
-                make,
-                model,
-                variant,
-                colour,
-                carStatus,
-                carAvailabilityStatus,
-                carId,
-                buyingIntent,
-                finance,
-                financeAmount,
-                rto,
-                rtoTransferName,
-                rtoChoiceNumber,
-                rtoProcessToBeDone,
-                rtoRequiredState,
-                rtoProcess,
-                insurance,
-                leadId
+                Name: getSafeValue(populatedOpportunity, 'name'),
+                Email: getSafeValue(populatedOpportunity, 'email'),
+                MobileNo: getSafeValue(populatedOpportunity, 'phoneNumber'),
+                AssignedTo: getSafeValue(populatedOpportunity.owner, 'username'),
+                ownerEmail: getSafeValue(populatedOpportunity.owner, 'email'), 
+                Source: getSafeValue(populatedOpportunity, 'source'),
+                Status: getSafeValue(populatedOpportunity, 'status'),
+                Stage: getSafeValue(populatedOpportunity, 'stage'),
+                Make: getSafeValue(populatedOpportunity.make, 'make'),
+                Model: getSafeValue(populatedOpportunity.model, 'name'),
+                Variant: getSafeValue(populatedOpportunity.variant, 'name'),
+                CarStatus: getSafeValue(populatedOpportunity, 'carStatus'),
+                CarAvailabilityStatus: getSafeValue(populatedOpportunity, 'carAvailabilityStatus'),
+                BuyingIntent: getSafeValue(populatedOpportunity, 'buyingIntent'),
+                Finance: getSafeValue(populatedOpportunity, 'finance'),
+                RTO: getSafeValue(populatedOpportunity, 'rto'),
+                RtoProcessToBeDone: getSafeValue(populatedOpportunity, 'rtoProcessToBeDone'),
+                RtoProcess: getSafeValue(populatedOpportunity, 'rtoProcess'),
+                Insurance: getSafeValue(populatedOpportunity, 'insurance'),
+            
             }
         });
 
@@ -849,7 +854,7 @@ export const createBuyOpportunity = async (req, res) => {
             error: error.message 
         });
     }
-};
+};      
 
 // Get all buy opportunities with filtering and pagination
 export const getAllBuyOpportunities = async (req, res) => {
@@ -907,6 +912,8 @@ export const getAllBuyOpportunities = async (req, res) => {
             if (startDate) filter.createdAt.$gte = new Date(startDate);
             if (endDate) filter.createdAt.$lte = new Date(endDate);
         }
+
+        if(req.user.role === 'Sales Executive') filter.createdBy = req.user.id;
 
         // Build sort object
         const sort = {};
@@ -1037,7 +1044,7 @@ export const updateBuyOpportunity = async (req, res) => {
             }
         )
         .populate('owner', 'username email')
-        .populate('make', 'name')
+        .populate('make', 'make')
         .populate('model', 'name')
         .populate('variant', 'name')
         .populate('car', 'name')
@@ -1050,26 +1057,35 @@ export const updateBuyOpportunity = async (req, res) => {
             });
         }
 
+        // console.log(updatedOpportunity);
+        
         // Create activity for opportunity update
         const activity = new Activity({
             user: req.user?._id || updatedOpportunity.owner, // Use logged-in user or opportunity owner
             type: 'buy_opportunity_updated',
-            content: `Buy opportunity updated for "${updatedOpportunity.name}"`,
+            content: `Buy opportunity updated By ${req.user?.username || updatedOpportunity.owner.username} for "${updatedOpportunity.name}"`,
+            leadId: updatedOpportunity.leadId,
             contentId: updatedOpportunity._id,
             metadata: {
-                previousData: {
-                    name: currentOpportunity.name,
-                    status: currentOpportunity.status,
-                    stage: currentOpportunity.stage,
-                    // Add other important fields that were changed
-                },
-                updatedData: {
-                    name: updatedOpportunity.name,
-                    status: updatedOpportunity.status,
-                    stage: updatedOpportunity.stage,
-                    // Add other important fields that were changed
-                },
-                changes: Object.keys(updateData)
+                Name: updatedOpportunity.name,
+                Email: updatedOpportunity.email,
+                MobileNo: updatedOpportunity.phoneNumber,
+                AssignedTo: updatedOpportunity.owner.username,
+                ownerEmail: updatedOpportunity.owner.email,
+                Source: updatedOpportunity.source,
+                Status: updatedOpportunity.status,
+                Stage: updatedOpportunity.stage,
+                Make: updatedOpportunity.make?.make || '',
+                Model: updatedOpportunity.model?.name || '',
+                Variant: updatedOpportunity.variant?.name || '',
+                CarStatus: updatedOpportunity.carStatus,
+                CarAvailabilityStatus: updatedOpportunity.carAvailabilityStatus,
+                BuyingIntent: updatedOpportunity.buyingIntent,
+                Finance: updatedOpportunity.finance,
+                RTO: updatedOpportunity.rto, // FIXED: changed from updateBuyOpportunity.rto
+                RtoProcessToBeDone: updatedOpportunity.rtoProcessToBeDone, // FIXED
+                RtoProcess: updatedOpportunity.rtoProcess, // FIXED
+                Insurance: updatedOpportunity.insurance,
             }
         });
 
@@ -1120,7 +1136,13 @@ export const deleteBuyOpportunity = async (req, res) => {
             });
         }
 
-        const deletedOpportunity = await BuyOpportunity.findByIdAndDelete(id);
+        const deletedOpportunity = await BuyOpportunity.findByIdAndDelete(id)
+        .populate('owner', 'username email')
+        .populate('make', 'make')
+        .populate('model', 'name')
+        .populate('variant', 'name')
+        .populate('car', 'name')
+        .populate('leadId', 'name lastName email phone');
 
         if (!deletedOpportunity) {
             return res.status(404).json({
@@ -1135,13 +1157,25 @@ export const deleteBuyOpportunity = async (req, res) => {
             type: 'buy_opportunity_deleted',
             content: `Buy opportunity deleted for "${deletedOpportunity.name}"`,
             contentId: deletedOpportunity._id,
+            leadId : deletedOpportunity.leadId,
             metadata: {
                 name: deletedOpportunity.name,
                 email: deletedOpportunity.email,
                 phoneNumber: deletedOpportunity.phoneNumber,
                 status: deletedOpportunity.status,
                 stage: deletedOpportunity.stage,
-                leadId: deletedOpportunity.leadId
+                make: deletedOpportunity.make?.make || '',
+                model: deletedOpportunity.model?.name || '',
+                variant: deletedOpportunity.variant?.name || '',
+                carStatus: deletedOpportunity.carStatus,
+                carAvailabilityStatus: deletedOpportunity.carAvailabilityStatus,
+                buyingIntent: deletedOpportunity.buyingIntent,
+                finance: deletedOpportunity.finance,
+                rto: deletedOpportunity.rto, // FIXED: changed from updateBuyOpportunity.rto
+                rtoProcessToBeDone: deletedOpportunity.rtoProcessToBeDone, // FIXED
+                rtoProcess: deletedOpportunity.rtoProcess, // FIXED
+                insurance: deletedOpportunity.insurance
+               
             }
         });
 
@@ -1356,11 +1390,12 @@ export const updateOpportunityStatus = async (req, res) => {
             type: 'buy_opportunity_status_updated',
             content: `Buy opportunity status changed from "${currentOpportunity.status}" to "${status}" for "${updatedOpportunity.name}"`,
             contentId: updatedOpportunity._id,
+            leadId : updatedOpportunity.leadId,
             metadata: {
                 previousStatus: currentOpportunity.status,
                 newStatus: status,
                 name: updatedOpportunity.name,
-                leadId: updatedOpportunity.leadId
+              
             }
         });
 

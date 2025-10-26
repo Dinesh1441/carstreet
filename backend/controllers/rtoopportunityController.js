@@ -490,6 +490,7 @@ import mongoose from "mongoose";
 
 // Create a new RTO opportunity
 export const createRtoOpportunity = async (req, res) => {
+
     try {
         const {
             name,
@@ -515,6 +516,8 @@ export const createRtoOpportunity = async (req, res) => {
                 message: 'Missing required fields: name, owner, stage, processToBeDone, leadId'
             });
         }
+        
+        const createdBy = req.user? req.user.id : null;
 
         const rtoOpportunity = new RtoOpportunity({
             name,
@@ -530,7 +533,8 @@ export const createRtoOpportunity = async (req, res) => {
             expectedDateOfTransfer: expectedDateOfTransfer || undefined,
             newRegNumber,
             newRcCardStatus,
-            leadId
+            leadId,
+            createdBy
         });
 
         await rtoOpportunity.save();
@@ -546,12 +550,11 @@ export const createRtoOpportunity = async (req, res) => {
             type: 'rto_opportunity_created',
             content: `RTO opportunity created for "${name}"`,
             contentId: rtoOpportunity._id,
+            leadId: leadId,
             metadata: {
                 name,
                 email,
-                phoneNumber,
-                owner,
-                status: status || 'Open',
+                phoneNumber,                
                 stage,
                 processToBeDone,
                 transferType,
@@ -559,7 +562,9 @@ export const createRtoOpportunity = async (req, res) => {
                 expectedDateOfTransfer: expectedDateOfTransfer || undefined,
                 newRegNumber,
                 newRcCardStatus,
-                leadId
+                owner : populatedOpportunity.owner.username,
+                ownerEmail : populatedOpportunity.owner.email,
+                status: status || 'Open',
             }
         });
 
@@ -638,6 +643,8 @@ export const getAllRtoOpportunities = async (req, res) => {
         // Build sort object
         const sort = {};
         sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+        if(req.user.role === 'Sales Executive') filter.createdBy = req.user.id;
 
         const opportunities = await RtoOpportunity.find(filter)
             .populate('owner', 'username email')
@@ -769,22 +776,15 @@ export const updateRtoOpportunity = async (req, res) => {
             type: 'rto_opportunity_updated',
             content: `RTO opportunity updated for "${updatedOpportunity.name}"`,
             contentId: updatedOpportunity._id,
+            leadId: updatedOpportunity.leadId,
             metadata: {
-                previousData: {
-                    name: currentOpportunity.name,
-                    status: currentOpportunity.status,
-                    stage: currentOpportunity.stage,
-                    processToBeDone: currentOpportunity.processToBeDone,
-                    rtoStatus: currentOpportunity.rtoStatus
-                },
-                updatedData: {
-                    name: updatedOpportunity.name,
-                    status: updatedOpportunity.status,
-                    stage: updatedOpportunity.stage,
-                    processToBeDone: updatedOpportunity.processToBeDone,
-                    rtoStatus: updatedOpportunity.rtoStatus
-                },
-                changes: Object.keys(updateData)
+                name: updatedOpportunity.name,
+                stage: updatedOpportunity.stage,
+                processToBeDone: updatedOpportunity.processToBeDone,
+                rtoStatus: updatedOpportunity.rtoStatus,
+                owner : updatedOpportunity.owner.username,
+                ownerEmail : updatedOpportunity.owner.email,
+                status: updatedOpportunity.status,
             }
         });
 
@@ -834,7 +834,9 @@ export const deleteRtoOpportunity = async (req, res) => {
             });
         }
 
-        const deletedOpportunity = await RtoOpportunity.findByIdAndDelete(id);
+        const deletedOpportunity = await RtoOpportunity.findByIdAndDelete(id)
+        .populate('owner', 'username email')
+        .populate('leadId', 'name email phone carMake Model variant');
 
         if (!deletedOpportunity) {
             return res.status(404).json({
@@ -849,6 +851,7 @@ export const deleteRtoOpportunity = async (req, res) => {
             type: 'rto_opportunity_deleted',
             content: `RTO opportunity deleted for "${deletedOpportunity.name}"`,
             contentId: deletedOpportunity._id,
+            leadId: deletedOpportunity.leadId,
             metadata: {
                 name: deletedOpportunity.name,
                 email: deletedOpportunity.email,
@@ -857,7 +860,7 @@ export const deleteRtoOpportunity = async (req, res) => {
                 stage: deletedOpportunity.stage,
                 processToBeDone: deletedOpportunity.processToBeDone,
                 rtoStatus: deletedOpportunity.rtoStatus,
-                leadId: deletedOpportunity.leadId
+                owner : deletedOpportunity.owner.username
             }
         });
 

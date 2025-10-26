@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronDown, DollarSign, Building, FileText, User, Mail, Phone, Calendar, Check, Eye, EyeOff } from 'lucide-react';
+import { X, ChevronDown, IndianRupee, Building, FileText, User, Mail, Phone, Calendar, Check, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const FinanceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead }) => {
   const [formData, setFormData] = useState({
@@ -33,6 +34,7 @@ const FinanceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, l
   const [showBankDropdown, setShowBankDropdown] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const bankDropdownRef = useRef(null);
+  const { token } = useAuth();
 
   const backend_url = import.meta.env.VITE_BACKEND_URL;
 
@@ -78,7 +80,7 @@ const FinanceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, l
     const fetchOwners = async () => {
       try {
         setLoading(true);
-        const ownersResponse = await axios.get(`${backend_url}/api/users/all`);
+        const ownersResponse = await axios.get(`${backend_url}/api/users/all`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (ownersResponse.data.status === 'success') {
           setOwners(ownersResponse.data.data || []);
         }
@@ -205,14 +207,17 @@ const FinanceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, l
         console.log('Updating finance opportunity:', opportunity._id, opportunityData);
         response = await axios.put(
           `${backend_url}/api/financeopportunity/update/${opportunity._id}`, 
-          opportunityData
+          opportunityData,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+          
         );
       } else {
         // Create new opportunity
         console.log('Creating finance opportunity:', opportunityData);
         response = await axios.post(
           `${backend_url}/api/financeopportunity/add`, 
-          opportunityData
+          opportunityData,
+          { headers: { 'Authorization': `Bearer ${token}` } }
         );
       }
       
@@ -316,7 +321,7 @@ const FinanceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, l
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowPreview(!showPreview)}
-            className={`px-3 py-2 border rounded-lg flex items-center text-sm transition-colors ${
+            className={`px-3 hidden py-2 border rounded-lg flex items-center text-sm transition-colors ${
               showPreview 
                 ? 'bg-blue-100 border-blue-300 text-blue-700' 
                 : 'border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -380,7 +385,7 @@ const FinanceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, l
               {/* Loan Details Preview */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
-                  <DollarSign size={18} className="mr-2" />
+                  <IndianRupee size={18} className="mr-2" />
                   Loan Details
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -542,14 +547,14 @@ const FinanceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, l
             {/* Loan Details Section */}
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
-                <DollarSign size={18} className="mr-2" />
+                <IndianRupee size={18} className="mr-2" />
                 Loan Details
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Loan Amount *</label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                    <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                     <input
                       type="number"
                       name="loanAmount"
@@ -807,7 +812,7 @@ const FinanceOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, l
             <button
               type="button"
               onClick={() => setShowPreview(true)}
-              className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 hidden py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               disabled={submitting}
             >
               <Eye className="h-4 w-4" />

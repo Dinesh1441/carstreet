@@ -423,6 +423,8 @@ export const createFinanceOpportunity = async (req, res) => {
             });
         }
 
+        const createdBy = req.user ? req.user.id : null;
+
         const financeOpportunity = new FinanceOpportunity({
             name,
             email,
@@ -440,7 +442,8 @@ export const createFinanceOpportunity = async (req, res) => {
             periodOfRepayment,
             loanNumber,
             loanSanctioned: loanSanctioned || false,
-            leadId
+            leadId,
+            createdBy
         });
 
         await financeOpportunity.save();
@@ -450,18 +453,20 @@ export const createFinanceOpportunity = async (req, res) => {
             .populate('owner', 'username email')
             .populate('leadId', 'name email phone');
 
+
+            console.log('Populated opportunity:', populatedOpportunity);
+
         // Create activity for opportunity creation
         const activity = new Activity({
             user: owner,
             type: 'finance_opportunity_created',
             content: `Finance opportunity created for "${name}"`,
             contentId: financeOpportunity._id,
+            leadId: leadId,
             metadata: {
                 name,
                 email,
                 phoneNumber,
-                owner,
-                status: status || 'Open',
                 stage,
                 loanAmount,
                 loanType,
@@ -472,7 +477,9 @@ export const createFinanceOpportunity = async (req, res) => {
                 periodOfRepayment,
                 loanNumber,
                 loanSanctioned: loanSanctioned || false,
-                leadId
+                owner : populatedOpportunity.owner.username,
+                ownerEmail : populatedOpportunity.owner.email,
+                 status: status || 'Open',
             }
         });
 
@@ -560,6 +567,8 @@ export const getAllFinanceOpportunities = async (req, res) => {
         // Build sort object
         const sort = {};
         sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        
+        if(req.user.role === 'Sales Executive') filter.createdBy = req.user.id;
 
         const opportunities = await FinanceOpportunity.find(filter)
             .populate('owner', 'username email')
@@ -698,23 +707,18 @@ export const updateFinanceOpportunity = async (req, res) => {
             user: req.user?._id || updatedOpportunity.owner, // Use logged-in user or opportunity owner
             type: 'finance_opportunity_updated',
             content: `Finance opportunity updated for "${updatedOpportunity.name}"`,
+            leadId : updatedOpportunity.leadId,
             contentId: updatedOpportunity._id,
             metadata: {
-                previousData: {
-                    name: currentOpportunity.name,
-                    status: currentOpportunity.status,
-                    stage: currentOpportunity.stage,
-                    financeStatus: currentOpportunity.financeStatus,
-                    loanAmount: currentOpportunity.loanAmount
-                },
-                updatedData: {
-                    name: updatedOpportunity.name,
-                    status: updatedOpportunity.status,
-                    stage: updatedOpportunity.stage,
-                    financeStatus: updatedOpportunity.financeStatus,
-                    loanAmount: updatedOpportunity.loanAmount
-                },
-                changes: Object.keys(updateData)
+                 name: updatedOpportunity.name,
+                 email: updatedOpportunity.email,
+                 phone: updatedOpportunity.phone,
+                stage: updatedOpportunity.stage,
+                financeStatus: updatedOpportunity.financeStatus,
+                loanAmount: updatedOpportunity.loanAmount,
+                 status: updatedOpportunity.status,
+                 owner: updatedOpportunity.owner.username,
+                 ownerEmail: updatedOpportunity.owner.email,
             }
         });
 
@@ -778,6 +782,7 @@ export const deleteFinanceOpportunity = async (req, res) => {
             user: req.user?._id || deletedOpportunity.owner, // Use logged-in user or opportunity owner
             type: 'finance_opportunity_deleted',
             content: `Finance opportunity deleted for "${deletedOpportunity.name}"`,
+            leadId : deletedOpportunity.leadId,
             contentId: deletedOpportunity._id,
             metadata: {
                 name: deletedOpportunity.name,
@@ -987,6 +992,7 @@ export const updateFinanceOpportunityStatus = async (req, res) => {
             user: req.user?._id || updatedOpportunity.owner, // Use logged-in user or opportunity owner
             type: 'finance_opportunity_status_updated',
             content: `Finance opportunity status changed from "${currentOpportunity.status}" to "${status}" for "${updatedOpportunity.name}"`,
+            leadId : updatedOpportunity.leadId,
             contentId: updatedOpportunity._id,
             metadata: {
                 previousStatus: currentOpportunity.status,
@@ -1072,6 +1078,7 @@ export const updateFinanceStatus = async (req, res) => {
             user: req.user?._id || updatedOpportunity.owner,
             type: 'finance_status_updated',
             content: `Finance status changed from "${currentOpportunity.financeStatus}" to "${financeStatus}" for "${updatedOpportunity.name}"`,
+            leadId : updatedOpportunity.leadId,
             contentId: updatedOpportunity._id,
             metadata: {
                 previousFinanceStatus: currentOpportunity.financeStatus,

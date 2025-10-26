@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronDown, FileText, MapPin, User, Mail, Phone, Calendar, Car, Check } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const RtoOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead }) => {
   const [formData, setFormData] = useState({
@@ -29,6 +30,7 @@ const RtoOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead 
   const [submitting, setSubmitting] = useState(false);
   const [showDocumentsDropdown, setShowDocumentsDropdown] = useState(false);
   const documentsDropdownRef = useRef(null);
+  const { token } = useAuth();
 
   const backend_url = import.meta.env.VITE_BACKEND_URL;
 
@@ -80,7 +82,7 @@ const RtoOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead 
     const fetchOwners = async () => {
       try {
         setLoading(true);
-        const ownersResponse = await axios.get(`${backend_url}/api/users/all`);
+        const ownersResponse = await axios.get(`${backend_url}/api/users/all` , { headers: { 'Authorization': `Bearer ${token}` } });
         if (ownersResponse.data.status === 'success') {
           setOwners(ownersResponse.data.data || []);
         }
@@ -199,15 +201,18 @@ const RtoOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead 
       
       if (isEdit && opportunity) {
         // Update existing opportunity
-        response = await axios.put(`${backend_url}/api/rtoopportunity/${opportunity._id}`, opportunityData);
+        response = await axios.put(`${backend_url}/api/rtoopportunity/${opportunity._id}`, opportunityData , { headers: { 'Authorization': `Bearer ${token}` } });
       } else {
         // Create new opportunity
-        response = await axios.post(`${backend_url}/api/rtoopportunity/add`, opportunityData);
+        response = await axios.post(`${backend_url}/api/rtoopportunity/add`, opportunityData , { headers: { 'Authorization': `Bearer ${token}` } });
       }
       
       if (response.data.status === 'success') {
         toast.success(`RTO opportunity ${isEdit ? 'updated' : 'created'} successfully`);
-        onSuccess();
+        if (onSuccess) {
+          onSuccess();
+        }
+        onClose();
       } else {
         toast.error(response.data.message || `Failed to ${isEdit ? 'update' : 'create'} RTO opportunity`);
       }

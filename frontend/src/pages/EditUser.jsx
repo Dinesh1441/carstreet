@@ -12,10 +12,12 @@ import {
   X,
   AlertCircle
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 function EditUser() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { token } = useAuth();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -32,6 +34,7 @@ function EditUser() {
   const [error, setError] = useState(null);
   const [currentImage, setCurrentImage] = useState(null);
 
+
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   // Fetch user data by ID
@@ -39,8 +42,12 @@ function EditUser() {
     const fetchUser = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${backendUrl}/api/users/get/${id}`);
-        
+        const response = await axios.get(`${backendUrl}/api/users/get/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
         if (response.data.status === "success") {
           const user = response.data.data;
           setFormData({
@@ -206,16 +213,17 @@ function EditUser() {
 
       const response = await axios.put(`${backendUrl}/api/users/update/${id}`, submitData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
         }
       });
       
       if (response.status === 200) {
         toast.success('User updated successfully!');
         // Wait a moment before navigating to show the success message
-        setTimeout(() => {
-          navigate('/settings/users');
-        }, 1500);
+        // setTimeout(() => {
+        //   navigate('/settings/users');
+        // }, 1500);
       }
     } catch (error) {
       console.error('Error updating user:', error);

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const TaskDetails = ({ leadId }) => {
   const [tasks, setTasks] = useState([]);
@@ -25,6 +26,7 @@ const TaskDetails = ({ leadId }) => {
   const [showTaskDetails, setShowTaskDetails] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const {token} = useAuth();
   
   // Add ref for search input
   const searchInputRef = useRef(null);
@@ -78,7 +80,7 @@ const TaskDetails = ({ leadId }) => {
       
       // Always include leadId if available
       if (leadId) {
-        params.append('associatedLead', leadId);
+        params.append('leadId', leadId);
       }
       
       // Add filters if they have values
@@ -95,9 +97,11 @@ const TaskDetails = ({ leadId }) => {
         params.append('priority', filters.priority);
       }
 
-      const response = await axios.get(`${backendUrl}/api/task/all?${params.toString()}`);
+     
+
+      const response = await axios.get(`${backendUrl}/api/task/all?${params.toString()}` , { headers: { 'Authorization': `Bearer ${token}` } });
       
-      if (response.data.status === 'success') {
+      if (response.data.status === 'success') { 
         setTasks(response.data.data);
       } else {
         setError(response.data.message || 'Failed to fetch tasks');
@@ -177,7 +181,7 @@ const TaskDetails = ({ leadId }) => {
   // Handle task completion
   const handleCompleteTask = async (taskId) => {
     try {
-      const response = await axios.put(`${backendUrl}/api/task/${taskId}/complete`);
+      const response = await axios.put(`${backendUrl}/api/task/${taskId}/complete` , {}, { headers: { 'Authorization': `Bearer ${token}` } });
       
       if (response.data.status === 'success') {
         toast.success('Task marked as completed');
@@ -192,7 +196,7 @@ const TaskDetails = ({ leadId }) => {
   // Handle task deletion
   const handleDeleteTask = async (taskId) => {
     try {
-      const response = await axios.delete(`${backendUrl}/api/task/${taskId}`);
+      const response = await axios.delete(`${backendUrl}/api/task/${taskId}` , { headers: { 'Authorization': `Bearer ${token}` } });
       
       if (response.data.status === 'success') {
         toast.success('Task deleted successfully');
@@ -442,7 +446,7 @@ const TaskDetails = ({ leadId }) => {
                       </td>
                       
                       <td className="px-6 py-4">
-                        <div className="space-y-1">
+                        <div className="space-y-1 min-w-max">
                           <div className="flex items-center text-sm text-gray-900">
                             <Calendar className="h-4 w-4 text-gray-400 mr-2" />
                             {formatDate(task.startDate)}
@@ -551,7 +555,7 @@ const TaskDetails = ({ leadId }) => {
               </div>
 
               <div className="sm:flex sm:items-start">
-                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 text-left w-full">
                   <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
                     Task Details
                   </h3>

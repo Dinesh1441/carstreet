@@ -8,15 +8,16 @@ import {
     deleteFinanceOpportunity,
     getFinanceOpportunitiesByLeadId
 } from '../controllers/financeopportunityController.js';
+import { userAuth } from '../middleware/auth.js';
 
 const financeOpportunityRoutes = express.Router();
 
-financeOpportunityRoutes.post('/add', createFinanceOpportunity);
-financeOpportunityRoutes.get('/all', getAllFinanceOpportunities);
-financeOpportunityRoutes.get('/lead/:leadId', getFinanceOpportunitiesByLeadId);
-financeOpportunityRoutes.get('/:id', getFinanceOpportunityById);
-financeOpportunityRoutes.put('/update/:id', updateFinanceOpportunity);
-financeOpportunityRoutes.patch('/:id/status', updateFinanceOpportunity);
-financeOpportunityRoutes.delete('/:id', deleteFinanceOpportunity);
+financeOpportunityRoutes.post('/add', userAuth, createFinanceOpportunity);
+financeOpportunityRoutes.get('/all', userAuth, getAllFinanceOpportunities);
+financeOpportunityRoutes.get('/lead/:leadId', userAuth, getFinanceOpportunitiesByLeadId);
+financeOpportunityRoutes.get('/:id', userAuth, getFinanceOpportunityById);
+financeOpportunityRoutes.put('/update/:id', userAuth, updateFinanceOpportunity);
+financeOpportunityRoutes.patch('/:id/status', userAuth, updateFinanceOpportunity);
+financeOpportunityRoutes.delete('/:id', userAuth, deleteFinanceOpportunity);
 
 export default financeOpportunityRoutes;

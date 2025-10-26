@@ -8,6 +8,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import AddLead from '../components/AddLead';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
+import { useSocket } from '../hooks/useSocket'; // Import the hook
 
 const Leads = () => {
   const [leads, setLeads] = useState([]);
@@ -37,9 +39,84 @@ const Leads = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [users, setUsers] = useState([]);
+  const { isSuperAdmin, token } = useAuth();
   const navigate = useNavigate();
 
+  const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+ 
+  
+
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+    // ✅ Initialize socket connection
+  const { socket: socketInstance, isConnected: socketConnected } = useSocket(backendUrl);
+
+  // Set socket and connection status
+  useEffect(() => {
+    setSocket(socketInstance);
+    setIsConnected(socketConnected);
+  }, [socketInstance, socketConnected]);
+
+
+    // ✅ Listen for socket events
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleLeadCreated = (data) => {
+      console.log('🆕 New lead received:', data);
+      toast.success(`New lead: ${data.lead.name} ${data.lead.lastName}`);
+      
+      // Refresh leads list
+      fetchLeads(currentPage, true);
+    };
+
+    const handleLeadUpdated = (data) => {
+      console.log('📝 Lead updated:', data);
+      toast.info(`Lead updated: ${data.lead.name} ${data.lead.lastName}`);
+      
+      // Update the specific lead in state
+      setLeads(prevLeads => 
+        prevLeads.map(lead => 
+          lead._id === data.lead._id ? data.lead : lead
+        )
+      );
+      setFilteredLeads(prevLeads => 
+        prevLeads.map(lead => 
+          lead._id === data.lead._id ? data.lead : lead
+        )
+      );
+    };
+
+    const handleLeadDeleted = (data) => {
+      console.log('🗑️ Lead deleted:', data);
+      toast.warning('Lead deleted');
+      
+      // Remove lead from state
+      setLeads(prevLeads => 
+        prevLeads.filter(lead => lead._id !== data.leadId)
+      );
+      setFilteredLeads(prevLeads => 
+        prevLeads.filter(lead => lead._id !== data.leadId)
+      );
+      setTotalLeads(prev => Math.max(0, prev - 1));
+    };
+
+    // Register event listeners
+    socket.on('lead_created', handleLeadCreated);
+    socket.on('lead_updated', handleLeadUpdated);
+    socket.on('lead_deleted', handleLeadDeleted);
+
+    // ✅ Cleanup event listeners on unmount or socket change
+    return () => {
+      if (socket) {
+        socket.off('lead_created', handleLeadCreated);
+        socket.off('lead_updated', handleLeadUpdated);
+        socket.off('lead_deleted', handleLeadDeleted);
+      }
+    };
+  }, [socket, currentPage]);
 
   // Fetch leads from API with pagination using Axios - FIXED
   const fetchLeads = async (page = 1, refresh = false, search = '', filterParams = {}) => {
@@ -58,7 +135,9 @@ const Leads = () => {
         },
         {
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+            
           }
         }
       );
@@ -94,6 +173,9 @@ const Leads = () => {
         params: {
           page: 1,
           limit: 100
+        },
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -112,16 +194,25 @@ const Leads = () => {
   }, [currentPage]);
 
   // Enhanced search with debouncing
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchTerm || Object.values(filters).some(val => val !== 'all' && val !== '')) {
-        setCurrentPage(1);
-        fetchLeads(1, false, searchTerm, filters);
-      }
-    }, 500);
+  // useEffect(() => {
+  //   const timeoutId = setTimeout(() => {
+  //     if (searchTerm || Object.values(filters).some(val => val !== 'all' && val !== '')) {
+  //       setCurrentPage(1);
+  //       fetchLeads(1, false, searchTerm, filters);
+  //     }
+  //   }, 500);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, filters]);
+  //   return () => clearTimeout(timeoutId);
+  // }, [searchTerm, filters]);
+
+useEffect(() => {
+  const timeoutId = setTimeout(() => {
+    setCurrentPage(1);
+    fetchLeads(1, false, searchTerm, filters);
+  }, 500);
+
+  return () => clearTimeout(timeoutId);
+}, [searchTerm, filters.status, filters.assignedTo, filters.source, filters.dateRange, filters.dateFrom, filters.dateTo]);
 
   // Handle refresh
   const handleRefresh = () => {
@@ -161,7 +252,11 @@ const Leads = () => {
 
     try {
       setDeleteLoading(true);
-      const response = await axios.delete(`${backendUrl}/api/leads/delete/${selectedLead._id}`);
+      const response = await axios.delete(`${backendUrl}/api/leads/delete/${selectedLead._id}`
+        , { headers: {
+            'Authorization': `Bearer ${token}`
+          }  }
+      );
 
       if (response.data.status === 'success') {
         // Refresh leads list
@@ -189,6 +284,10 @@ const Leads = () => {
       const response = await axios.post(`${backendUrl}/api/leads/export`, {
         type,
         filters: type === 'filtered' ? filters : {}
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (response.data.status === 'success') {
@@ -317,23 +416,23 @@ const Leads = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+    <div className="min-h-screen py-6 ">
       <div className="mx-auto">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-6 md:flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center">
+            <h1 className="text-md md:text-3xl font-bold text-gray-800 flex items-center">
               <Users className="mr-2 h-8 w-8 text-blue-600" />
               Leads Management
             </h1>
             <p className="text-gray-600 mt-2">Manage and track your sales leads effectively</p>
           </div>
           
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 mt-4 md:mt-0 ">
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="flex items-center px-4 py-2 bg-white text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              className="flex w-full items-center justify-center px-4 py-2 bg-white text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
@@ -341,7 +440,7 @@ const Leads = () => {
             
             <button 
               onClick={handleAddLead}
-              className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              className="flex w-full justify-center min-w-max items-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
             >
               <Plus className="h-4 w-4 mr-2" />
               New Lead
@@ -350,50 +449,50 @@ const Leads = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div className="bg-white rounded-xl shadow-sm p-3 border border-gray-100 transition-all hover:shadow-md">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                <User className="h-6 w-6" />
+              <div className="md:p-3 p-2 rounded-full bg-blue-100 text-blue-600">
+                <User className="h-4 w-4" />
               </div>
               <div className="ml-4">
-                <h2 className="text-2xl font-bold text-gray-800">{totalLeads}</h2>
+                <h2 className=" text-xl  md:text-2xl font-bold text-gray-800">{totalLeads}</h2>
                 <p className="text-gray-600">Total Leads</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
+          <div className="bg-white rounded-xl shadow-sm p-3 border border-gray-100 transition-all hover:shadow-md">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-green-100 text-green-600">
-                <Phone className="h-6 w-6" />
+              <div className="md:p-3 p-2 rounded-full bg-green-100 text-green-600">
+                <Phone className="h-4 w-4 md:h-6 md:w-6" />
               </div>
               <div className="ml-4">
-                <h2 className="text-2xl font-bold text-gray-800">{leads.filter(l => l.status === 'New Lead').length}</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800">{leads.filter(l => l.status === 'New Lead').length}</h2>
                 <p className="text-gray-600">New Leads</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
+          <div className="bg-white rounded-xl shadow-sm p-3 border border-gray-100 transition-all hover:shadow-md">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-purple-100 text-purple-600">
-                <Mail className="h-6 w-6" />
+              <div className="md:p-3 p-2 rounded-full bg-purple-100 text-purple-600">
+                <Mail className="h-4 w-4 md:h-6 md:w-6 " />
               </div>
               <div className="ml-4">
-                <h2 className="text-2xl font-bold text-gray-800">{leads.filter(l => l.status === 'Contacted').length}</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800">{leads.filter(l => l.status === 'Contacted').length}</h2>
                 <p className="text-gray-600">Contacted</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all hover:shadow-md">
+          <div className="bg-white rounded-xl shadow-sm p-3 border border-gray-100 transition-all hover:shadow-md">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
-                <CheckCircle className="h-6 w-6" />
+              <div className="md:p-3 p-2 rounded-full bg-yellow-100 text-yellow-600">
+                <CheckCircle className="h-4 w-4 md:h-6 md:w-6" />
               </div>
               <div className="ml-4">
-                <h2 className="text-2xl font-bold text-gray-800">{leads.filter(l => l.status === 'Qualified').length}</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800">{leads.filter(l => l.status === 'Qualified').length}</h2>
                 <p className="text-gray-600">Qualified</p>
               </div>
             </div>
@@ -417,10 +516,15 @@ const Leads = () => {
                 />
               </div>
               
-              <div className="flex space-x-2">
+             
+            </div>
+            
+            <div className="flex space-x-2">
+              {/* Export Dropdown */}
+               <div className="flex space-x-2 w-full">
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center px-3 py-2.5 border rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex justify-center items-center  px-3 py-2.5 border w-full rounded-lg text-sm font-medium transition-colors ${
                     showFilters 
                       ? 'border-blue-500 text-blue-600 bg-blue-50' 
                       : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
@@ -430,15 +534,11 @@ const Leads = () => {
                   Filters
                 </button>
               </div>
-            </div>
-            
-            <div className="flex space-x-2">
-              {/* Export Dropdown */}
-              <div className="relative">
-                <button
+              <div className="relative w-full">
+              {isSuperAdmin && (  <button
                   onClick={() => setShowExportOptions(!showExportOptions)}
                   disabled={exportLoading}
-                  className="inline-flex items-center px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:opacity-50"
+                  className="flex justify-center items-center w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:opacity-50"
                 >
                   {exportLoading ? (
                     <Loader className="h-4 w-4 mr-2 animate-spin" />
@@ -447,7 +547,7 @@ const Leads = () => {
                   )}
                   Export
                   <ChevronLeft className="h-4 w-4 ml-1 transform -rotate-90" />
-                </button>
+                </button> )}
                 
                 {showExportOptions && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
@@ -767,13 +867,16 @@ const Leads = () => {
                           >
                             <Edit className="h-4 w-4" />
                           </button>
-                          <button 
-                            onClick={() => handleDeleteLead(lead)}
-                            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
-                            title="Delete lead"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => handleDeleteLead(lead)}
+                              className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
+                              title="Delete lead"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                    
                         </div>
                       </td>
                     </tr>
@@ -803,8 +906,8 @@ const Leads = () => {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-              <div className="flex-1 flex items-center justify-between">
-                <div>
+              <div className="flex-1 md:flex items-center justify-between">
+                <div className="mb-2 md:mb-0" >
                   <p className="text-sm text-gray-700">
                     Showing <span className="font-medium">{(currentPage - 1) * leadsPerPage + 1}</span> to{' '}
                     <span className="font-medium">
@@ -896,11 +999,11 @@ const Leads = () => {
       {showDeleteModal && selectedLead && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <div className="fixed inset-0 bg-gray-500 opacity-75 transition-opacity" aria-hidden="true"></div>
             
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+
+            <div className="inline-block relative align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
               <div className="sm:flex sm:items-start">
                 <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
                   <Trash2 className="h-6 w-6 text-red-600" />

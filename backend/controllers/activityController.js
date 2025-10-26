@@ -58,6 +58,7 @@ export const createActivity = async (req, res) => {
 };
 
 // Get all activities with pagination and filtering
+// controllers/activityController.js - Updated getActivities function
 export const getActivities = async (req, res) => {
   try {
     const {
@@ -65,6 +66,7 @@ export const getActivities = async (req, res) => {
       limit = 10,
       user,
       type,
+      leadId,
       startDate,
       endDate,
       sortBy = 'createdAt',
@@ -87,6 +89,16 @@ export const getActivities = async (req, res) => {
     if (type) {
       filter.type = type;
     }
+
+    if (leadId) {
+      if (!mongoose.Types.ObjectId.isValid(leadId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid lead ID format'
+        });
+      }
+      filter.leadId = leadId;
+    }
     
     // Date range filter
     if (startDate || endDate) {
@@ -106,6 +118,7 @@ export const getActivities = async (req, res) => {
     // Execute query with pagination
     const activities = await Activity.find(filter)
       .populate('user', 'username email name')
+      .populate('leadId', 'name lastName email phone')
       .sort(sort)
       .limit(limit * 1)
       .skip((page - 1) * limit)

@@ -12,7 +12,7 @@ import {
   X,
   Users,
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   Shield,
   Phone,
   Mail,
@@ -39,6 +39,8 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import InsuranceOpportunity from '../components/InsuranceOpportunity';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const InsuranceOpportunityPage = () => {
   const [opportunities, setOpportunities] = useState([]);
@@ -64,6 +66,8 @@ const InsuranceOpportunityPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [opportunityToDelete, setOpportunityToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const { isSuperAdmin, token } = useAuth();
+  const navigate = useNavigate();
   const [dropdownData, setDropdownData] = useState({
     owners: [],
     insuranceTypes: [],
@@ -91,7 +95,10 @@ const InsuranceOpportunityPage = () => {
         }
       });
 
-      const response = await axios.get(`${backend_url}/api/insuranceopportunity/all`, { params });
+      const response = await axios.get(`${backend_url}/api/insuranceopportunity/all`, { 
+        params,
+        headers: { 'Authorization': `Bearer ${token}` } 
+      });
 
       if (response.data.status === 'success') {
         setOpportunities(response.data.data);
@@ -108,7 +115,7 @@ const InsuranceOpportunityPage = () => {
   const fetchDropdownData = async () => {
     try {
       const [ownersRes] = await Promise.all([
-        axios.get(`${backend_url}/api/users/all`)
+        axios.get(`${backend_url}/api/users/all` , { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
       setDropdownData({
@@ -232,7 +239,7 @@ const InsuranceOpportunityPage = () => {
 
     try {
       setDeleting(true);
-      const response = await axios.delete(`${backend_url}/api/insuranceopportunity/${opportunityToDelete._id}`);
+      const response = await axios.delete(`${backend_url}/api/insuranceopportunity/${opportunityToDelete._id}` , { headers: { 'Authorization': `Bearer ${token}` } });
       
       if (response.data.status === 'success') {
         toast.success('Insurance opportunity deleted successfully');
@@ -260,7 +267,7 @@ const InsuranceOpportunityPage = () => {
     try {
       const response = await axios.put(`${backend_url}/api/insuranceopportunity/${id}`, {
         status: newStatus
-      });
+      } , { headers: { 'Authorization': `Bearer ${token}` } });
 
       if (response.data.status === 'success') {
         toast.success(`Insurance opportunity marked as ${newStatus}`);
@@ -347,7 +354,7 @@ const InsuranceOpportunityPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen md:py-0 py-6">
       {/* Header */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -356,13 +363,13 @@ const InsuranceOpportunityPage = () => {
             <p className="text-gray-600 mt-1">Manage and track all insurance opportunities</p>
           </div>
           <div className="flex gap-2 mt-4 sm:mt-0">
-            <button 
+            {isSuperAdmin && (<button
               onClick={exportToExcel}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center transition-colors"
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Export Excel
-            </button>
+            </button> )}
             {/* <button 
               onClick={() => setShowAddModal(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors"
@@ -404,7 +411,7 @@ const InsuranceOpportunityPage = () => {
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
-                <DollarSign className="h-6 w-6 text-blue-600" />
+                <IndianRupee className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Insurance Value</p>
@@ -714,6 +721,13 @@ const InsuranceOpportunityPage = () => {
                       >
                         <Eye className="h-4 w-4" />
                       </button>
+                        <button
+                            onClick={() => navigate(`/leads/${opportunity.leadId._id}`)}
+                            className="text-blue-600 hover:text-blue-900 transition-colors"
+                            title="View Lead Details"
+                          >
+                            <User className="h-4 w-4" />
+                          </button>
                       <button
                         onClick={() => editOpportunity(opportunity)}
                         className="text-green-600 hover:text-green-900 transition-colors"
@@ -739,13 +753,14 @@ const InsuranceOpportunityPage = () => {
                           </button>
                         </>
                       )}
-                      <button
-                        onClick={() => showDeleteConfirmation(opportunity)}
-                        className="text-red-600 hover:text-red-900 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {isSuperAdmin && (
+                        <button
+                          onClick={() => showDeleteConfirmation(opportunity)}
+                          className="text-red-600 hover:text-red-900 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                      </button> )}
                     </div>
                   </td>
                 </tr>
@@ -955,8 +970,8 @@ const InsuranceOpportunityPage = () => {
 
       {/* View Details Modal */}
       {showDetailsModal && selectedOpportunity && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0   flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg border border-gray-300 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-start mb-6">
                 <div>
@@ -1004,7 +1019,7 @@ const InsuranceOpportunityPage = () => {
                 <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg p-4">
                   <div className="flex items-center">
                     <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center shadow-sm">
-                      <DollarSign className="h-6 w-6 text-green-600" />
+                      <IndianRupee className="h-6 w-6 text-green-600" />
                     </div>
                     <div className="ml-4">
                       <h3 className="font-semibold text-gray-900">Insurance Cost</h3>
@@ -1047,7 +1062,7 @@ const InsuranceOpportunityPage = () => {
                     </h3>
                     <div className="space-y-3">
                       <DetailItem label="Insurance Type" value={selectedOpportunity.insuranceType} icon={Shield} />
-                      <DetailItem label="Insurance Cost" value={formatCurrency(selectedOpportunity.costOfInsurance)} icon={DollarSign} />
+                      <DetailItem label="Insurance Cost" value={formatCurrency(selectedOpportunity.costOfInsurance)} icon={IndianRupee} />
                       <DetailItem label="Insurance Term" value={selectedOpportunity.insuranceTerm} icon={Calendar} />
                       <DetailItem label="Insurer Name" value={selectedOpportunity.insurerName} icon={Building} />
                       <DetailItem label="Insurance Expiry Date" value={formatDate(selectedOpportunity.insuranceExpiryDate)} icon={Calendar} />

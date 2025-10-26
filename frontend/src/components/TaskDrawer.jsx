@@ -8,7 +8,7 @@ const TaskDrawer = ({ onClose, lead, onTaskAdded }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   
   const [task, setTask] = useState({
     taskType: 'Call Back',
@@ -66,7 +66,7 @@ const TaskDrawer = ({ onClose, lead, onTaskAdded }) => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${backend_url}/api/users/all`);
+        const response = await axios.get(`${backend_url}/api/users/all` , { headers: { 'Authorization': `Bearer ${token}` } });
         if (response.data && response.data.status === 'success') {
           setUsers(response.data.data || []);
           
@@ -259,6 +259,7 @@ const TaskDrawer = ({ onClose, lead, onTaskAdded }) => {
       const response = await axios.post(`${backend_url}/api/task/add`, taskData, {
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
 

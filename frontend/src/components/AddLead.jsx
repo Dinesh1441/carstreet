@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const AddLead = ({ onClose, onSuccess, lead, isEdit = false }) => {
   const [formData, setFormData] = useState({
@@ -66,6 +67,7 @@ const AddLead = ({ onClose, onSuccess, lead, isEdit = false }) => {
   const [showStateDropdown, setShowStateDropdown] = useState(false);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const { token } = useAuth();
 
   // File upload state
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -105,8 +107,8 @@ const AddLead = ({ onClose, onSuccess, lead, isEdit = false }) => {
       try {
         setLoading(true);
         const [usersRes, statesRes] = await Promise.all([
-          axios.get(`${backend_url}/api/users/all`),
-          axios.get(`${backend_url}/api/state/all`)
+          axios.get(`${backend_url}/api/users/all`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          axios.get(`${backend_url}/api/state/all`, { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
         setUsers(usersRes.data.data || usersRes.data.users || []);
@@ -127,7 +129,7 @@ const AddLead = ({ onClose, onSuccess, lead, isEdit = false }) => {
     const fetchCities = async () => {
       if (formData.state) {
         try {
-          const response = await axios.get(`${backend_url}/api/city/state/${formData.state}`);
+          const response = await axios.get(`${backend_url}/api/city/state/${formData.state}` , { headers: { 'Authorization': `Bearer ${token}` } });
           setCities(response.data.data || response.data.cities || []);
         } catch (error) {
           console.error('Error fetching cities:', error);
@@ -163,8 +165,8 @@ const AddLead = ({ onClose, onSuccess, lead, isEdit = false }) => {
     formData.append('profileImage', files[0]);
 
     const response = await axios.post(`${backend_url}/api/leads/upload`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+      headers: { 'Content-Type': 'multipart/form-data' , 'Authorization': `Bearer ${token}` }
+    } );
 
     if (response.data.status === 'success') {
       setFormData(prev => ({
@@ -282,9 +284,9 @@ const AddLead = ({ onClose, onSuccess, lead, isEdit = false }) => {
 
       let response;
       if (isEdit && lead) {
-        response = await axios.put(`${backend_url}/api/leads/update/${lead._id}`, leadData);
+        response = await axios.put(`${backend_url}/api/leads/update/${lead._id}`, leadData, { headers: { 'Authorization': `Bearer ${token}` } });
       } else {
-        response = await axios.post(`${backend_url}/api/leads/add`, leadData);
+        response = await axios.post(`${backend_url}/api/leads/add`, leadData, { headers: { 'Authorization': `Bearer ${token}` } });
       }
 
       if (response.data.status === 'success') {

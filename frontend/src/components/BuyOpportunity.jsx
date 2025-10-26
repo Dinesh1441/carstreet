@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, Target, Percent, Calendar, User, Mail, Phone, ChevronDown } from 'lucide-react';
+import { X, IndianRupee, Target, Percent, Calendar, User, Mail, Phone, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify'; 
+import { useAuth } from '../contexts/AuthContext';
 
 const BuyOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead }) => {
   const [formData, setFormData] = useState({
@@ -46,6 +47,7 @@ const BuyOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead 
   const [owners, setOwners] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const {token} = useAuth();
 
   const backend_url = import.meta.env.VITE_BACKEND_URL;
 
@@ -85,7 +87,7 @@ const BuyOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead 
   useEffect(() => {
     const fetchOwners = async () => {
       try {
-        const ownersResponse = await axios.get(`${backend_url}/api/users/all`);
+        const ownersResponse = await axios.get(`${backend_url}/api/users/all` , { headers: { 'Authorization': `Bearer ${token}` } });
         if (ownersResponse.data.status === 'success') {
           setOwners(ownersResponse.data.data || []);
         }
@@ -100,9 +102,9 @@ const BuyOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead 
     try {
       setLoading(true);
       const [brandsResponse, modelsResponse, variantsResponse] = await Promise.all([
-        axios.get(`${backend_url}/api/makes/all`),
-        axios.get(`${backend_url}/api/models/all`),
-        axios.get(`${backend_url}/api/variants/all`)
+        axios.get(`${backend_url}/api/makes/all`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        axios.get(`${backend_url}/api/models/all`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        axios.get(`${backend_url}/api/variants/all`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
       setBrands(brandsResponse.data.makes || []);
@@ -226,7 +228,8 @@ const BuyOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead 
         console.log('Updating opportunity:', opportunity._id, opportunityData);
         response = await axios.put(
           `${backend_url}/api/buyopportunity/${opportunity._id}`, 
-          opportunityData
+          opportunityData,
+          { headers: { 'Authorization': `Bearer ${token}` } }
         );
       } else {
         // Create new opportunity
@@ -234,6 +237,7 @@ const BuyOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead 
         response = await axios.post(
           `${backend_url}/api/buyopportunity/add`, 
           opportunityData
+          , { headers: { 'Authorization': `Bearer ${token}` } }
         );
       }
       
@@ -243,7 +247,10 @@ const BuyOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead 
             ? 'Buy opportunity updated successfully' 
             : 'Buy opportunity created successfully'
         );
-        onSuccess();
+        if (onSuccess) {
+          onSuccess();
+        }
+        onClose();
       } else {
         toast.error(
           isEdit 
@@ -548,7 +555,7 @@ const BuyOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Min Budget (In Lakh)</label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 <input 
                   type="number" 
                   name="minBudget"
@@ -566,7 +573,7 @@ const BuyOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Max Budget (In Lakh)</label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 <input 
                   type="number" 
                   name="maxBudget"
@@ -652,7 +659,7 @@ const BuyOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Finance Amount</label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                   <input 
                     type="number" 
                     name="financeAmount"

@@ -4,13 +4,26 @@ import leadAssignmentService from "../services/leadAssignmentService.js";
 import Activity from "../models/activityModel.js";
 import User from "../models/userModel.js";
 
+
+
 export const addLead = async (req, res) => {
+
+  const io = req.app.get('io'); 
+
+  if(req.body == "" || req.body == undefined) {
+        return res.status(400).json({
+        status: "error",
+        message: "Data is Missing"
+      });
+    }
+
+
   try {
     const {
-      name,
+      name = '',
       lastName = '',
       email = '',
-      phone,
+      phone = '',
       mobile = '',
       profileImage = null,
       jobTitle = '',
@@ -34,9 +47,10 @@ export const addLead = async (req, res) => {
       Model,
       variant = '',
       status = 'New Lead',
-      assignedTo,
+      assignedTo = '',
     } = req.body;
 
+    
     // Validate required fields
     if (!name || !phone) {
       return res.status(400).json({
@@ -112,10 +126,12 @@ export const addLead = async (req, res) => {
     const newLead = new LeadModel(leadData);
     const savedLead = await newLead.save();
 
+    
+
     // Get assigned user details for activity log
     const assignedUser = assignedUserId ? await User.findById(assignedUserId) : null;
 
-    console.log(`Lead created with ID: ${savedLead._id}, Assigned To: ${assignedUser ? assignedUser.username : 'Unassigned'}, Assignment Method: ${assignmentMethod}`);
+    // console.log(`Lead created with ID: ${savedLead._id}, Assigned To: ${assignedUser ? assignedUser.username : 'Unassigned'}, Assignment Method: ${assignmentMethod}`);
 
     // Create activity log
     const activity = new Activity({
@@ -132,6 +148,15 @@ export const addLead = async (req, res) => {
     const populatedLead = await LeadModel.findById(savedLead._id)
       .populate('assignedTo', 'username email name role')
       .exec();
+
+
+      if (io) {
+      io.emit('lead_created', {
+        lead: populatedLead,
+        message: 'New lead created'
+      });
+      console.log('Socket event emitted: lead_created');
+    }
 
     res.status(201).json({
       status: "success",
@@ -427,3 +452,45 @@ export const exportLeads = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+// Get leads with pagination - FIXED VERSION
+export const getLeadsByOwner = async (req, res) => {
+  try {
+    const { id } = req.user.id ? req.user : req.body;
+    const { page = 1, limit = 10, sort = '-createdAt', search = '', filters = {} } = req.body;
+    
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const leads = await LeadModel.find({ assignedTo: id })
+      .populate('assignedTo', 'name email username')
+      .sort(sort)
+      .skip(skip)
+      .limit(limitNum);
+
+    const total = await LeadModel.countDocuments({ assignedTo: id });
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        leads,
+        total,
+        page: pageNum,
+        pages: Math.ceil(total / limitNum),
+        hasNextPage: pageNum < Math.ceil(total / limitNum),
+        hasPrevPage: pageNum > 1
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: error.message
+    });
+  }
+};
+

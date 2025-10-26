@@ -52,10 +52,10 @@ const QuickStats = ({ summary }) => {
               <p className="text-gray-500 text-sm font-medium">{stat.label}</p>
               <p className="text-2xl font-bold text-gray-800 mt-1">{stat.value.toLocaleString()}</p>
               <div className="flex items-center mt-2">
-                <span className={`text-xs px-2 py-1 rounded-full ${getColorClasses(stat.color)}`}>
+                {/* <span className={`text-xs px-2 py-1 rounded-full ${getColorClasses(stat.color)}`}>
                   {stat.change}
                 </span>
-                <span className="text-xs text-gray-500 ml-2">from last week</span>
+                <span className="text-xs text-gray-500 ml-2">from last week</span> */}
               </div>
             </div>
             <div className={`text-2xl ${getColorClasses(stat.color)} p-3 rounded-lg`}>

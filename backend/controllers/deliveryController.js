@@ -457,6 +457,7 @@
 
 import DeliveryForm from '../models/deliveryModel.js';
 import Activity from '../models/activityModel.js';
+import Car from '../models/carModel.js';
 
 // Update delivery form
 export const updateDeliveryForm = async (req, res) => {
@@ -473,8 +474,8 @@ export const updateDeliveryForm = async (req, res) => {
       status
     } = req.body;
 
-    console.log('Update request body:', req.body);
-    console.log('Update request files:', req.files);
+    // console.log('Update request body:', req.body);
+    // console.log('Update request files:', req.files);
 
     const deliveryForm = await DeliveryForm.findById(req.params.id);
 
@@ -526,17 +527,25 @@ export const updateDeliveryForm = async (req, res) => {
       deliveryForm.updatedBy = req.user.id;
     }
 
-    console.log('Saving delivery form...');
+    // console.log('Saving delivery form...');
     const updatedForm = await deliveryForm.save();
-    console.log('Delivery form saved successfully');
+    // console.log('Delivery form saved successfully');
     
     // Populate the updated form
     const populatedForm = await DeliveryForm.findById(updatedForm._id)
       .populate('leadId', 'name email status')
       .populate('soldBy', 'username email')
-      .populate('car')
+       .populate({
+          path: 'car',
+          populate: [
+            { path: 'brand', select: 'make' },
+            { path: 'model', select: 'name' }
+          ]
+        })
       .populate('createdBy', 'username email')
       .populate('updatedBy', 'username email');
+
+      console.log('Populated form:', populatedForm);
 
     // Create activity for delivery form update
     const activity = new Activity({
@@ -544,17 +553,14 @@ export const updateDeliveryForm = async (req, res) => {
       type: 'delivery_form_updated',
       content: `Delivery form updated for "${deliveryForm.name}"`,
       contentId: deliveryForm._id,
+      leadId: deliveryForm.leadId, 
       metadata: {
-        previousData,
-        updatedData: {
-          name: deliveryForm.name,
-          deliveryStatus: deliveryForm.deliveryStatus,
-          rtoTransferred: deliveryForm.rtoTransferred,
-          status: deliveryForm.status
-        },
-        changes: Object.keys(req.body).filter(key => 
-          !['_id', 'createdAt', 'updatedAt', '__v'].includes(key)
-        ),
+        name: populatedForm.name,
+        SoldBy : populatedForm.soldBy.username,
+        Car : populatedForm.car.brand.make + ' ' + populatedForm.car.model.name,
+        color : populatedForm.car.color,
+        deliveryStatus: populatedForm.deliveryStatus,
+        rtoTransferred: populatedForm.rtoTransferred,
         documentsAdded: req.files ? req.files.length : 0
       }
     });
@@ -591,8 +597,8 @@ export const createDeliveryForm = async (req, res) => {
       status
     } = req.body;
 
-    console.log('Create request body:', req.body);
-    console.log('Create request files:', req.files);
+    // console.log('Create request body:', req.body);
+    // console.log('Create request files:', req.files);
 
     // Validate required fields
     if (!name || !phoneNumber || !soldBy || !car || !expectedCompletionDate) {
@@ -613,6 +619,10 @@ export const createDeliveryForm = async (req, res) => {
       }));
     }
 
+
+    const createdBy = req.user ? req.user.id : null;
+
+
     const newDeliveryForm = new DeliveryForm({
       name,
       phoneNumber,
@@ -623,7 +633,8 @@ export const createDeliveryForm = async (req, res) => {
       rtoTransferred: rtoTransferred || 'No',
       expectedCompletionDate,
       status: status || 'Pending',
-      documents
+      documents,
+      createdBy
     });
 
     // Set createdBy if user is authenticated
@@ -631,16 +642,27 @@ export const createDeliveryForm = async (req, res) => {
       newDeliveryForm.createdBy = req.user.id;
     }
 
-    console.log('Saving new delivery form...');
+    // console.log('Saving new delivery form...');
     const savedForm = await newDeliveryForm.save();
-    console.log('Delivery form created successfully');
+    // console.log('Delivery form created successfully');
 
+    await Car.findByIdAndUpdate(car, { status: 'Sold' });
     // Populate the created form
     const populatedForm = await DeliveryForm.findById(savedForm._id)
       .populate('leadId', 'name email status')
       .populate('soldBy', 'username email')
-      .populate('car')
+      .populate({
+        path: 'car',
+        populate: [
+          { path: 'brand', select: 'make' },
+          { path: 'model', select: 'name' }
+        ]
+      })
       .populate('createdBy', 'username email');
+
+      
+
+
 
     // Create activity for delivery form creation
     const activity = new Activity({
@@ -648,16 +670,16 @@ export const createDeliveryForm = async (req, res) => {
       type: 'delivery_form_created',
       content: `Delivery form created for "${name}"`,
       contentId: savedForm._id,
+      leadId: leadId,
       metadata: {
-        name,
-        phoneNumber,
-        leadId,
-        soldBy,
-        car,
+        Name : name,
+        MobileNo : phoneNumber,
+        soldBy : populatedForm.soldBy.username,
+        car : populatedForm.car.brand?.make + ' ' + populatedForm.car.model?.name,
         deliveryStatus: deliveryStatus || 'Not Delivered',
         rtoTransferred: rtoTransferred || 'No',
         expectedCompletionDate,
-        status: status || 'Pending',
+        // status: status || 'Pending',
         documentsCount: documents.length
       }
     });
@@ -714,6 +736,7 @@ export const addDocument = async (req, res) => {
       type: 'delivery_form_document_added',
       content: `Document "${req.file.originalname}" added to delivery form for "${deliveryForm.name}"`,
       contentId: deliveryForm._id,
+      leadId: deliveryForm.leadId,
       metadata: {
         documentName: req.file.originalname,
         fileName: req.file.originalname,
@@ -775,6 +798,7 @@ export const removeDocument = async (req, res) => {
       type: 'delivery_form_document_removed',
       content: `Document "${removedDocument.name}" removed from delivery form for "${deliveryForm.name}"`,
       contentId: deliveryForm._id,
+      leadId: deliveryForm.leadId,
       metadata: {
         documentName: removedDocument.name,
         fileName: removedDocument.fileName,
@@ -802,18 +826,23 @@ export const removeDocument = async (req, res) => {
 // Get all delivery forms
 export const getAllDeliveryForms = async (req, res) => {
   try {
-    const deliveryForms = await DeliveryForm.find()
-      .populate('leadId', 'name email status')
-      .populate('soldBy', 'username email')
-       .populate({
-    path: 'car',
-    select: 'year color price', // Include these fields from the Car document
-    populate: [
-      { path: 'brand', select: 'make' },   // Populate brand from makeModel
-      { path: 'model', select: 'name' },   // Populate model from CarModel
-      { path: 'variant', select: 'name' }  // Populate variant from CarVariant
-    ]
-  })
+
+    
+    const filter = {};
+    if(req.user.role !== 'Super Admin') filter.createdBy = req.user.id;
+    
+    const deliveryForms = await DeliveryForm.find(filter)
+        .populate('leadId', 'name email status')
+        .populate('soldBy', 'username email')
+        .populate({
+      path: 'car',
+      select: 'year color price', // Include these fields from the Car document
+      populate: [
+        { path: 'brand', select: 'make' },   // Populate brand from makeModel
+        { path: 'model', select: 'name' },   // Populate model from CarModel
+        { path: 'variant', select: 'name' }  // Populate variant from CarVariant
+      ]
+    })
       .populate('createdBy', 'username email')
       .populate('updatedBy', 'username email')
       .sort({ createdAt: -1 });
@@ -892,6 +921,7 @@ export const deleteDeliveryForm = async (req, res) => {
       type: 'delivery_form_deleted',
       content: `Delivery form deleted for "${deliveryForm.name}"`,
       contentId: deliveryForm._id,
+      leadId: deliveryForm.leadId,
       metadata: deletedData
     });
 
@@ -1060,6 +1090,7 @@ export const updateDeliveryStatus = async (req, res) => {
       type: 'delivery_status_updated',
       content: `Delivery status changed from "${previousStatus}" to "${deliveryStatus}" for "${deliveryForm.name}"`,
       contentId: deliveryForm._id,
+      leadId: deliveryForm.leadId,
       metadata: {
         previousStatus,
         newStatus: deliveryStatus,

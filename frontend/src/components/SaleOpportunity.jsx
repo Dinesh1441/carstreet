@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, ChevronDown, User, Mail, Phone, MapPin, Car, Calendar, 
-  FileText, Upload, Eye, EyeOff, Check, Search, DollarSign,
+  FileText, Upload, Eye, EyeOff, Check, Search, IndianRupee,
   Shield, Key, Wrench, Image
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead }) => {
 
@@ -90,6 +91,8 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showVariantDropdown, setShowVariantDropdown] = useState(false);
 
+  const { token } = useAuth();
+
   // File upload states
   const [uploadingFiles, setUploadingFiles] = useState({
     carImages: false,
@@ -140,9 +143,9 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
       try {
         setLoading(true);
         const [ownersRes, statesRes, makesRes] = await Promise.all([
-          axios.get(`${backend_url}/api/users/all`),
-          axios.get(`${backend_url}/api/state/all`),
-          axios.get(`${backend_url}/api/makes/all`)
+          axios.get(`${backend_url}/api/users/all`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          axios.get(`${backend_url}/api/state/all`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          axios.get(`${backend_url}/api/makes/all`, { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
         setOwners(ownersRes.data.data || ownersRes.data.users || []);
@@ -164,7 +167,13 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
     const fetchCities = async () => {
       if (formData.state) {
         try {
-          const response = await axios.get(`${backend_url}/api/city/state/${formData.state}`);
+          let stateid = formData.state;
+          if (isEdit && opportunity) {
+            stateid = formData.state._id;
+          }
+          console.log('stateid', stateid);
+
+          const response = await axios.get(`${backend_url}/api/city/state/${stateid}` , { headers: { 'Authorization': `Bearer ${token}` } });
           setCities(response.data.data || response.data.cities || []);
         } catch (error) {
           console.error('Error fetching cities:', error);
@@ -185,7 +194,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
         try {
           // Ensure we're passing the ID as a string, not an object
           const makeId = typeof formData.make === 'object' ? formData.make._id : formData.make;
-          const response = await axios.get(`${backend_url}/api/models/make/${makeId}`);
+          const response = await axios.get(`${backend_url}/api/models/make/${makeId}` , { headers: { 'Authorization': `Bearer ${token}` } });
           setModels(response.data.models || response.data.data || []);
         } catch (error) {
           console.error('Error fetching models:', error);
@@ -207,7 +216,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
         try {
           // Ensure we're passing the ID as a string, not an object
           const modelId = typeof formData.model === 'object' ? formData.model._id : formData.model;
-          const response = await axios.get(`${backend_url}/api/variants/model/${modelId}`);
+          const response = await axios.get(`${backend_url}/api/variants/model/${modelId}` , { headers: { 'Authorization': `Bearer ${token}` } });
           setVariants(response.data.variants || response.data.data || []);
         } catch (error) {
           console.error('Error fetching variants:', error);
@@ -247,7 +256,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
       });
 
       const response = await axios.post(`${backend_url}/api/sellopportunity/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data', 'Authorization': `Bearer ${token}` }
       });
 
       if (response.data.status === 'success') {
@@ -377,7 +386,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
       newErrors.fuelType = 'Invalid fuel type selected';
     }
 
-    const ownershipOptions = ['1st', '2nd', '3rd', '4th', ''];
+    const ownershipOptions = ['1st', '2nd', '3rd', '4th'];
     if (formData.ownership && !ownershipOptions.includes(formData.ownership)) {
       newErrors.ownership = 'Invalid ownership selected';
     }
@@ -501,9 +510,9 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
 
       let response;
       if (isEdit && opportunity) {
-        response = await axios.put(`${backend_url}/api/sellopportunity/${opportunity._id}`, opportunityData);
+        response = await axios.put(`${backend_url}/api/sellopportunity/update/${opportunity._id}`, opportunityData , { headers: { 'Authorization': `Bearer ${token}` } });
       } else {
-        response = await axios.post(`${backend_url}/api/sellopportunity/add`, opportunityData);
+        response = await axios.post(`${backend_url}/api/sellopportunity/add`, opportunityData , { headers: { 'Authorization': `Bearer ${token}` } });
       }
 
       if (response.data.status === 'success') {
@@ -559,7 +568,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
   ];
   const yearOptions = Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i);
   const fuelTypeOptions = ['Petrol', 'Diesel', 'Electric', 'Hybrid', ''];
-  const ownershipOptions = ['1st', '2nd', '3rd', '4th', ''];
+  const ownershipOptions = ['1st', '2nd', '3rd', '4th'];
   const registrationTypeOptions = ['Individual', 'Corporate', 'Taxi', ''];
   const insuranceTypeOptions = ['Return To Invoice (RTI)', 'Zero Dep', '3rd Party Only', 'Comprehensive / Normal', ''];
   const insuranceCompanyOptions = [
@@ -585,11 +594,15 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
   const warrantyOptions = ['Normal', 'Extended', 'NA'];
 
   // Helper functions
-  const getSelectedName = (id, list, field = 'name') => {
-    if (!id) return '';
-    const item = list.find(item => item._id === id);
-    return item ? item[field] : '';
-  };
+const getSelectedName = (id, list, field = 'name') => {
+  if (!id) return '';
+  
+  // Handle both string IDs and object IDs
+  const itemId = typeof id === 'object' ? id._id : id;
+  const item = list.find(item => item._id === itemId);
+  return item ? item[field] : '';
+};
+  
 
   return (
     <div className="p-6 h-full flex flex-col bg-white rounded-lg">
@@ -1311,7 +1324,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
           {/* 4. KILOMETERS AND PRICING */}
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
-              <DollarSign className="h-5 w-5 mr-2" />
+              <IndianRupee className="h-5 w-5 mr-2" />
               Kilometers & Pricing
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1623,7 +1636,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
               isEdit ? 'Update Sell Opportunity' : 'Save Sell Opportunity'
             )}
           </button>
-        </div>a
+        </div>
       </div>
     </div>
   );

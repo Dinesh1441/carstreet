@@ -2,12 +2,17 @@
   import { X, Paperclip, Image, FileText } from 'lucide-react';
   import Quill from 'quill';
   import 'quill/dist/quill.snow.css';
+import { useAuth } from '../contexts/AuthContext';
+import { toast } from 'react-toastify';
 
   const NoteDrawer = ({ onClose, lead, onAddNote }) => {
     const [noteContent, setNoteContent] = useState('');
     const [attachments, setAttachments] = useState([]);
     const quillRef = useRef(null);
     const fileInputRef = useRef(null);
+    const { token } = useAuth();
+  
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
     // Initialize Quill editor
     React.useEffect(() => {
@@ -56,6 +61,7 @@
     };
 
     const handleSubmit = () => {
+       if(noteContent === '') return toast.error('Note cannot be empty');;
       onAddNote(noteContent, attachments);
       onClose();
     };

@@ -56,29 +56,34 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
       id: 'leads', 
       label: 'All Leads', 
       icon: <Settings size={20} />, 
-      roles: ['Super Admin'],
+      roles: ['Super Admin' , 'Sales Executive', 'Team Member'],
       path : '/leads'
     },
      { 
       id: 'deliveryforms', 
       label: 'All Delivery', 
       icon: <Settings size={20} />, 
-      roles: ['Super Admin'],
+      roles: ['Super Admin', 'Sales Executive', 'Team Member'],
       path : '/deliveryforms'
     },
     { 
       id: 'opportunity', 
       label: 'Opportunity', 
       icon: <Users size={20} />, 
-      roles: ['Super Admin', 'Team Member'],
+      roles: ['Super Admin', 'Sales Executive'],
       subItems: [
-        { id: 'sale', label: 'Sale Opportunity', icon: <User size={16} />, path: '/opportunity/sale' },
+        { id: 'sale', label: 'Sell Opportunity', icon: <User size={16} />, path: '/opportunity/sale' },
         { id: 'buy', label: 'Buy Opportunity', icon: <User size={16} />, path: '/opportunity/buy' },
-        { id: 'finance', label: 'Finance Opportunity', icon: <TrendingUp size={16} />, path: '/opportunity/finance' },
+        { id: 'finance', label: 'Finance Oppxortunity', icon: <TrendingUp size={16} />, path: '/opportunity/finance' },
         { id: 'insurance', label: 'Insurance Opportunities', icon: <FileText size={16} />, path: '/opportunity/insurance' },
         { id: 'rto', label: 'RTO Opportunities', icon: <FileText size={16} />, path: '/opportunity/rto' }
       ]
     },
+    { id: 'finance', label: 'Finance Opportunity',  roles: ['Finance Department'], icon: <TrendingUp size={16} />, path: '/opportunity/finance' },
+    { id: 'insurance', label: 'Insurance Opportunities', roles: ['Insurance Department'], icon: <FileText size={16} />, path: '/opportunity/insurance' },
+     { id: 'rto', label: 'RTO Opportunities', roles: ['RTO Department'], icon: <FileText size={16} />, path: '/opportunity/rto' },
+ 
+
     { 
       id: 'inventory', 
       label: 'Car Inventory', 
@@ -138,6 +143,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
     //   ]
     // },
      { id: 'users', roles: ['Super Admin'], label: 'User Management', icon: <Users size={16} />, path: '/users' },
+     { id: 'api', roles: ['Super Admin'], label: 'APIs Management', icon: <Users size={16} />, path: '/api' },
    
   ];
 
@@ -198,7 +204,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
     <>
       {/* Mobile overlay */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden" onClick={toggleSidebar} />
+        <div className="fixed inset-0 bg-black opacity-50 z-40 md:hidden" onClick={toggleSidebar} />
       )}
       
       <aside className={`sidebar-container w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white fixed top-0 left-0 bottom-0 overflow-y-auto transition-all duration-300 shadow-xl flex flex-col z-40 md:translate-x-0 md:top-16 ${

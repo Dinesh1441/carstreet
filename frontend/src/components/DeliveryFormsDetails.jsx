@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const DeliveryFormsDetails = ({ leadId }) => {
   const [deliveryForms, setDeliveryForms] = useState([]);
@@ -24,6 +25,7 @@ const DeliveryFormsDetails = ({ leadId }) => {
   const [showFormDetails, setShowFormDetails] = useState(false);
   const [formToDelete, setFormToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { token } = useAuth();
   
   const searchInputRef = useRef(null);
 
@@ -158,7 +160,7 @@ const DeliveryFormsDetails = ({ leadId }) => {
   // Handle delivery form deletion
   const handleDeleteForm = async (formId) => {
     try {
-      const response = await axios.delete(`${backendUrl}/api/delivery/${formId}`);
+      const response = await axios.delete(`${backendUrl}/api/delivery/${formId}` , { headers: { 'Authorization': `Bearer ${token}` } });
       
       if (response.data.success) {
         toast.success('Delivery form deleted successfully');
@@ -182,7 +184,8 @@ const DeliveryFormsDetails = ({ leadId }) => {
   const handleDownloadDocument = async (fileUrl, fileName) => {
     try {
       const response = await axios.get(`${backendUrl}${fileUrl}`, {
-        responseType: 'blob'
+        responseType: 'blob',
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       
       const url = window.URL.createObjectURL(new Blob([response.data]));

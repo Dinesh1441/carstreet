@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit, Trash2, Download, X, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const CarBrands = () => {
   // State management
@@ -19,6 +20,8 @@ const CarBrands = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  const { token } = useAuth();
+
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -26,7 +29,9 @@ const CarBrands = () => {
   useEffect(() => {
     const allBrands = async () => {
       try {
-        const response = await axios.get(`${backendUrl}/api/makes/all`);
+        const response = await axios.get(`${backendUrl}/api/makes/all`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         console.log('Fetched brands:', response.data.makes);
         setBrands(response.data.makes);
         setFilteredBrands(response.data.makes);
@@ -67,7 +72,7 @@ const CarBrands = () => {
     try {
       const response = await axios.post(`${backendUrl}/api/makes/add`, {
         make: newBrand.make
-      });
+      } , { headers: { 'Authorization': `Bearer ${token}` } });
      
       if(response.data.status === 'success') {
         setBrands([...brands, response.data.make]);
@@ -92,7 +97,7 @@ const CarBrands = () => {
     try {
       const response = await axios.put(`${backendUrl}/api/makes/update/${currentBrand._id}`, {
         make: currentBrand.make
-      });
+      } , { headers: { 'Authorization': `Bearer ${token}` } } );
       
       if(response.data.status === 'success') {
         setBrands(brands.map(brand =>
@@ -111,7 +116,7 @@ const CarBrands = () => {
   // Delete a brand
   const handleDeleteBrand = async () => {
     try {
-      const response = await axios.delete(`${backendUrl}/api/makes/delete/${brandToDelete}`);
+      const response = await axios.delete(`${backendUrl}/api/makes/delete/${brandToDelete}` , { headers: { 'Authorization': `Bearer ${token}` } });
 
       if(response.data.status === 'success') {
         setBrands(brands.filter(brand => brand._id !== brandToDelete));
@@ -160,10 +165,10 @@ const CarBrands = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen  py-6 md:py-0">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Car Brands Management</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Car Brands Management</h1>
           <p className="text-gray-600 mt-2">Manage your car brands with ease</p>
         </div>
 

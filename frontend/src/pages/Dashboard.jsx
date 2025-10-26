@@ -9,25 +9,129 @@ import TaskCompletionChart from '../components/dashboard/TaskCompletionChart';
 import DeliveryTimelineChart from '../components/dashboard/DeliveryTimelineChart';
 import RecentActivities from '../components/dashboard/RecentActivities';
 import QuickStats from '../components/dashboard/QuickStats';
+import { useAuth } from '../contexts/AuthContext';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState('week');
+  const [timeRange, setTimeRange] = useState('this_month');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [error, setError] = useState(null);
+  const { token } = useAuth();
+
+  // Function to calculate date ranges
+  const getDateRange = (range) => {
+    const now = new Date();
+    const start = new Date();
+    
+    switch (range) {
+      case 'today':
+        start.setHours(0, 0, 0, 0);
+        return {
+          startDate: start.toISOString().split('T')[0],
+          endDate: now.toISOString().split('T')[0]
+        };
+      
+      case 'yesterday':
+        start.setDate(now.getDate() - 1);
+        start.setHours(0, 0, 0, 0);
+        const yesterdayEnd = new Date(start);
+        yesterdayEnd.setHours(23, 59, 59, 999);
+        return {
+          startDate: start.toISOString().split('T')[0],
+          endDate: yesterdayEnd.toISOString().split('T')[0]
+        };
+      
+      case 'this_week':
+        start.setDate(now.getDate() - now.getDay());
+        start.setHours(0, 0, 0, 0);
+        return {
+          startDate: start.toISOString().split('T')[0],
+          endDate: now.toISOString().split('T')[0]
+        };
+      
+      case 'last_week':
+        start.setDate(now.getDate() - now.getDay() - 7);
+        start.setHours(0, 0, 0, 0);
+        const lastWeekEnd = new Date(start);
+        lastWeekEnd.setDate(start.getDate() + 6);
+        return {
+          startDate: start.toISOString().split('T')[0],
+          endDate: lastWeekEnd.toISOString().split('T')[0]
+        };
+      
+      case 'this_month':
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        return {
+          startDate: start.toISOString().split('T')[0],
+          endDate: now.toISOString().split('T')[0]
+        };
+      
+      case 'last_month':
+        start.setMonth(now.getMonth() - 1, 1);
+        start.setHours(0, 0, 0, 0);
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+        return {
+          startDate: start.toISOString().split('T')[0],
+          endDate: lastMonthEnd.toISOString().split('T')[0]
+        };
+      
+      case 'this_quarter':
+        const quarter = Math.floor(now.getMonth() / 3);
+        start.setMonth(quarter * 3, 1);
+        start.setHours(0, 0, 0, 0);
+        return {
+          startDate: start.toISOString().split('T')[0],
+          endDate: now.toISOString().split('T')[0]
+        };
+      
+      case 'this_year':
+        start.setMonth(0, 1);
+        start.setHours(0, 0, 0, 0);
+        return {
+          startDate: start.toISOString().split('T')[0],
+          endDate: now.toISOString().split('T')[0]
+        };
+      
+      case 'custom':
+        return {
+          startDate: customStartDate,
+          endDate: customEndDate
+        };
+      
+      default:
+        return {};
+    }
+  };
 
   useEffect(() => {
     fetchDashboardData();
-  }, [timeRange]);
+  }, [timeRange, customStartDate, customEndDate]);
 
-   const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${backendUrl}/api/dashboard/stats?timeRange=${timeRange}`, {
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      const dateRange = getDateRange(timeRange);
+      
+      if (dateRange.startDate) {
+        params.append('startDate', dateRange.startDate);
+      }
+      if (dateRange.endDate) {
+        params.append('endDate', dateRange.endDate);
+      }
+
+      const url = `${backendUrl}/api/dashboard/stats?${params.toString()}`;
+      
+      const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -37,11 +141,24 @@ const Dashboard = () => {
       
       const result = await response.json();
       setDashboardData(result.data);
+      setError(null);
     } catch (err) {
       setError(err.message);
       console.error('Error fetching dashboard data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTimeRangeChange = (newRange) => {
+    setTimeRange(newRange);
+  };
+
+  const handleCustomDateApply = () => {
+    if (customStartDate && customEndDate) {
+      setTimeRange('custom');
+    } else {
+      alert('Please select both start and end dates');
     }
   };
 
@@ -86,26 +203,60 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="md:flex justify-between items-center mt-4 lg:mt-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
           <p className="text-gray-600">Welcome back! Here's your business overview.</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <select 
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="today">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="quarter">This Quarter</option>
-            <option value="year">This Year</option>
-          </select>
+        <div className="flex items-center space-x-4 mt-3 md:mt-0">
+          {/* Time Range Selector */}
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">Time Range:</label>
+            <select 
+              value={timeRange}
+              onChange={(e) => handleTimeRangeChange(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="this_week">This Week</option>
+              <option value="last_week">Last Week</option>
+              <option value="this_month">This Month</option>
+              <option value="last_month">Last Month</option>
+              {/* <option value="this_quarter">This Quarter</option> */}
+              <option value="this_year">This Year</option>
+              <option value="custom">Custom Range</option>
+            </select>
+          </div>
+
+          {/* Custom Date Range */}
+          {timeRange === 'custom' && (
+            <div className="flex items-center space-x-2">
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-gray-500">to</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={handleCustomDateApply}
+                className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                Apply
+              </button>
+            </div>
+          )}
+
           <button 
             onClick={fetchDashboardData}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="bg-blue-600 hidden text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Refresh
           </button>

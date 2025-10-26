@@ -3,6 +3,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
+
+
 export const useAuth = () => {
   return useContext(AuthContext);
 };
@@ -11,6 +13,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [token, setToken] = useState(null);
 
   useEffect(() => {
     // Check if user is logged in on app load
@@ -28,6 +32,10 @@ export const AuthProvider = ({ children }) => {
       .then(data => {
         if (data.status === "success") {
           setUser(data.data);
+          setToken(token);
+          if (data.data.role === 'Super Admin') {
+            setIsSuperAdmin(true);
+          }
         } else {
           setUser(null);
           localStorage.removeItem('token');
@@ -63,6 +71,7 @@ export const AuthProvider = ({ children }) => {
       if (data.status === "success") {
         const userData = data.data.user;
         setUser(userData);
+        setToken(data.data.token);
         localStorage.setItem('token', data.data.token);
         return { success: true };
       } else {
@@ -76,6 +85,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('token');
+    setToken(null);
+    setIsSuperAdmin(false);
   };
 
   const value = {
@@ -83,7 +94,9 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     loading,
-    authChecked
+    token,
+    authChecked,
+    isSuperAdmin,
   };
 
   return (

@@ -26,7 +26,7 @@ const sellOpportunitySchema = new mongoose.Schema({
   phoneNumber: String,
   state: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "State"
+    ref: "StateModel"
   },
   city: {
     type: mongoose.Schema.Types.ObjectId,
@@ -149,7 +149,12 @@ const sellOpportunitySchema = new mongoose.Schema({
   leadId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Lead"
-  }
+  },
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        }
 }, { timestamps: true });
 
 const SellOpportunity = mongoose.models.SellOpportunity || mongoose.model("SellOpportunity", sellOpportunitySchema);

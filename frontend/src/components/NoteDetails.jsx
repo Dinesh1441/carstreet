@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const NoteDetails = ({ leadId }) => {
   const [notes, setNotes] = useState([]);
@@ -20,6 +21,7 @@ const NoteDetails = ({ leadId }) => {
   const [showNoteDetails, setShowNoteDetails] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { token } = useAuth();
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -27,7 +29,7 @@ const NoteDetails = ({ leadId }) => {
   const fetchNotes = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${backendUrl}/api/notes/lead/${leadId}`);
+      const response = await axios.get(`${backendUrl}/api/notes/lead/${leadId}` , { headers: { 'Authorization': `Bearer ${token}` } });
       
       if (response.data.status === 'success') {
         setNotes(response.data.data);
@@ -51,7 +53,7 @@ const NoteDetails = ({ leadId }) => {
   // Handle note deletion
   const handleDeleteNote = async (noteId) => {
     try {
-      const response = await axios.delete(`${backendUrl}/api/notes/${noteId}`);
+      const response = await axios.delete(`${backendUrl}/api/notes/${noteId}` , { headers: { 'Authorization': `Bearer ${token}` } });
       
       if (response.data.status === 'success') {
         toast.success('Note deleted successfully');
@@ -71,17 +73,36 @@ const NoteDetails = ({ leadId }) => {
     setShowNoteDetails(true);
   };
 
-  // Download attachment
-  const handleDownloadAttachment = (attachmentUrl) => {
-    // Create a temporary link to trigger download
+ const handleDownloadAttachment = async (attachmentUrl) => {
+  try {
+    console.log('Original attachment URL:', attachmentUrl);
+    console.log('Backend URL:', backendUrl);
+    
+    // Construct the full URL
+    const fullUrl = `${backendUrl}${attachmentUrl.startsWith('/') ? attachmentUrl : `/${attachmentUrl}`}`;
+    console.log('Full download URL:', fullUrl);
+    
+    // Test if the file exists
+    const response = await fetch(fullUrl, { method: 'HEAD' });
+    
+    if (!response.ok) {
+      throw new Error(`File not found: ${response.status} ${response.statusText}`);
+    }
+    
+    // Create download link
     const link = document.createElement('a');
-    link.href = `${backendUrl}/${attachmentUrl}`;
+    link.href = fullUrl;
     link.target = '_blank';
     link.download = attachmentUrl.split('/').pop();
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+    
+  } catch (error) {
+    console.error('Download error:', error);
+    // alert(`Download failed: ${error.message}`);
+  }
+};
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -218,7 +239,7 @@ const NoteDetails = ({ leadId }) => {
         ) : (
           <div className="divide-y divide-gray-200">
             {filteredAndSortedNotes.map((note) => (
-              <div key={note._id} className="p-6 hover:bg-gray-50">
+              <div key={note._id} className="p-3 hover:bg-gray-50">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     {/* Note Content */}
@@ -255,7 +276,7 @@ const NoteDetails = ({ leadId }) => {
                     )}
 
                     {/* Metadata */}
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
                       <div className="flex items-center">
                         <User className="h-4 w-4 mr-1" />
                         <span>By {note.createdBy?.name || 'Unknown User'}</span>
@@ -272,7 +293,7 @@ const NoteDetails = ({ leadId }) => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center space-x-2 ml-4">
+                  <div className="flex flex-col space-x-2 ml-4">
                     <button
                       onClick={() => handleViewNote(note)}
                       className="text-blue-600 hover:text-blue-900 p-1 rounded transition-colors"
@@ -309,7 +330,7 @@ const NoteDetails = ({ leadId }) => {
 
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-            <div className="inline-block relative align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
+            <div className="inline-block relative align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl w-full sm:p-6">
               <div className="absolute top-0 right-0 pt-4 pr-4">
                 <button
                   onClick={() => setShowNoteDetails(false)}
@@ -320,7 +341,7 @@ const NoteDetails = ({ leadId }) => {
               </div>
 
               <div className="sm:flex sm:items-start">
-                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                <div className="mt-3  sm:mt-0 sm:ml-4 sm:text-left w-full">
                   <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
                     Note Details
                   </h3>
@@ -349,10 +370,10 @@ const NoteDetails = ({ leadId }) => {
                         </label>
                         <div className="space-y-2">
                           {selectedNote.attachments.map((attachment, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                              <div className="flex items-center">
+                            <div key={index} className="md:flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center mb-2 md:mb-0">
                                 <Paperclip className="h-4 w-4 text-gray-400 mr-2" />
-                                <span className="text-sm text-gray-700 truncate max-w-xs">
+                                <span className="text-sm text-gray-700 max-w-xs">
                                   {attachment.split('/').pop()}
                                 </span>
                               </div>

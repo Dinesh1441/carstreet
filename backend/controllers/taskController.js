@@ -107,7 +107,8 @@ export const getAllTasks = async (req, res) => {
             owner,
             organizer,
             startDate,
-            endDate
+            endDate,
+            leadId
         } = req.query;
 
         const pageNum = parseInt(page);
@@ -129,6 +130,7 @@ export const getAllTasks = async (req, res) => {
         if (priority) filter.priority = priority;
         if (owner) filter.owner = owner;
         if (organizer) filter.organizer = organizer;
+        filter.associatedLead = leadId
 
         // Date range filter
         if (startDate || endDate) {
@@ -175,6 +177,8 @@ export const getAllTasks = async (req, res) => {
         });
     }
 };
+
+
 
 // Get task by ID
 export const getTaskById = async (req, res) => {

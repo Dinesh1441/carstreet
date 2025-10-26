@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, DollarSign, Target, Percent, Calendar } from 'lucide-react';
+import { X, IndianRupee, Target, Percent, Calendar } from 'lucide-react';
 
 const OpportunityDrawer = ({ onClose, lead }) => {
   const [opportunity, setOpportunity] = useState({
@@ -49,7 +49,7 @@ const OpportunityDrawer = ({ onClose, lead }) => {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
           <div className="relative">
-            <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             <input 
               type="number" 
               name="amount"

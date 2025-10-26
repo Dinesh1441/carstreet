@@ -11,17 +11,18 @@ import {
     getRtoOpportunitiesByProcess,
     getRtoOpportunityCounts
 } from '../controllers/rtoopportunityController.js';
+import { userAuth } from '../middleware/auth.js';
 
 const rtoOpportunityRoutes = express.Router();
 
-rtoOpportunityRoutes.post('/add', createRtoOpportunity);
-rtoOpportunityRoutes.get('/all', getAllRtoOpportunities);
-rtoOpportunityRoutes.get('/stats', getRtoOpportunityStats);
-rtoOpportunityRoutes.get('/counts', getRtoOpportunityCounts);
-rtoOpportunityRoutes.get('/process/:processType', getRtoOpportunitiesByProcess);
-rtoOpportunityRoutes.get('/lead/:leadId', getRtoOpportunitiesByLeadId);
-rtoOpportunityRoutes.get('/:id', getRtoOpportunityById);
-rtoOpportunityRoutes.put('/:id', updateRtoOpportunity);
-rtoOpportunityRoutes.delete('/:id', deleteRtoOpportunity);
+rtoOpportunityRoutes.post('/add', userAuth, createRtoOpportunity);
+rtoOpportunityRoutes.get('/all', userAuth, getAllRtoOpportunities);
+rtoOpportunityRoutes.get('/stats', userAuth, getRtoOpportunityStats);
+rtoOpportunityRoutes.get('/counts', userAuth, getRtoOpportunityCounts);
+rtoOpportunityRoutes.get('/process/:processType', userAuth, getRtoOpportunitiesByProcess);
+rtoOpportunityRoutes.get('/lead/:leadId', userAuth, getRtoOpportunitiesByLeadId);
+rtoOpportunityRoutes.get('/:id', userAuth, getRtoOpportunityById);
+rtoOpportunityRoutes.put('/:id', userAuth, updateRtoOpportunity);
+rtoOpportunityRoutes.delete('/:id', userAuth, deleteRtoOpportunity);
 
 export default rtoOpportunityRoutes;

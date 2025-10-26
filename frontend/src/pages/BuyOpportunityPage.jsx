@@ -12,7 +12,7 @@ import {
   X,
   Users,
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   Car,
   Phone,
   Mail,
@@ -37,6 +37,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import BuyOpportunity from '../components/BuyOpportunity'; // Your existing component
+import { useAuth } from '../contexts/AuthContext';
 
 const BuyOpportunityPage = () => {
   const [opportunities, setOpportunities] = useState([]);
@@ -64,6 +65,7 @@ const BuyOpportunityPage = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState(null);
+  const { isSuperAdmin, token } = useAuth();
   const [dropdownData, setDropdownData] = useState({
     owners: [],
     brands: [],
@@ -97,7 +99,12 @@ const BuyOpportunityPage = () => {
         }
       });
 
-      const response = await axios.get(`${backend_url}/api/buyopportunity/all`, { params });
+    const response = await axios.get(`${backend_url}/api/buyopportunity/all`, {
+      params,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
       if (response.data.status === 'success') {
         setOpportunities(response.data.data);
@@ -116,9 +123,9 @@ const BuyOpportunityPage = () => {
   const fetchDropdownData = async () => {
     try {
       const [ownersRes, brandsRes, modelsRes] = await Promise.all([
-        axios.get(`${backend_url}/api/users/all`),
-        axios.get(`${backend_url}/api/makes/all`),
-        axios.get(`${backend_url}/api/models/all`)
+        axios.get(`${backend_url}/api/users/all` , { headers: { 'Authorization': `Bearer ${token}` } }),
+        axios.get(`${backend_url}/api/makes/all`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        axios.get(`${backend_url}/api/models/all`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
       setDropdownData({
@@ -238,7 +245,7 @@ const BuyOpportunityPage = () => {
 
     try {
       setDeleting(true);
-      const response = await axios.delete(`${backend_url}/api/buyopportunity/${opportunityToDelete._id}`);
+      const response = await axios.delete(`${backend_url}/api/buyopportunity/${opportunityToDelete._id}` , { headers: { 'Authorization': `Bearer ${token}` } });
       
       if (response.data.status === 'success') {
         toast.success('Opportunity deleted successfully');
@@ -266,7 +273,7 @@ const BuyOpportunityPage = () => {
     try {
       const response = await axios.patch(`${backend_url}/api/buyopportunity/${id}/status`, {
         status: newStatus
-      });
+      } , { headers: { 'Authorization': `Bearer ${token}` } });
 
       if (response.data.status === 'success') {
         toast.success(`Opportunity marked as ${newStatus}`);
@@ -343,7 +350,7 @@ const BuyOpportunityPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen py-6 md:py-0">
       {/* Header */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -352,13 +359,13 @@ const BuyOpportunityPage = () => {
             <p className="text-gray-600 mt-1">Manage and track all buy opportunities</p>
           </div>
           <div className="flex gap-2 mt-4 sm:mt-0">
-            <button 
+            {isSuperAdmin && ( <button
               onClick={exportToExcel}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center transition-colors"
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Export Excel
-            </button>
+            </button> )}
             {/* <button 
               onClick={() => setShowAddModal(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors"
@@ -414,7 +421,7 @@ const BuyOpportunityPage = () => {
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-red-100 rounded-lg">
-                <DollarSign className="h-6 w-6 text-red-600" />
+                <IndianRupee className="h-6 w-6 text-red-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Lost</p>
@@ -777,13 +784,14 @@ const BuyOpportunityPage = () => {
                           </button>
                         </>
                       )}
-                      <button
-                        onClick={() => confirmDelete(opportunity)}
-                        className="text-red-600 hover:text-red-900 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {isSuperAdmin && (
+                        <button
+                          onClick={() => confirmDelete(opportunity)}
+                          className="text-red-600 hover:text-red-900 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                      </button> )}
                     </div>
                   </td>
                 </tr>
@@ -965,7 +973,7 @@ const BuyOpportunityPage = () => {
       {/* View Details Modal */}
       {showDetailsModal && selectedOpportunity && (
         <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center p-4 z-50 ">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray overflow-hidden">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto hide-scrollbar border border-gray overflow-hidden">
             <div className="p-6">
               {/* Header */}
               <div className="flex justify-between items-start mb-6">
@@ -1033,7 +1041,7 @@ const BuyOpportunityPage = () => {
                 <div className="bg-gradient-to-br from-purple-50 to-violet-100 rounded-lg p-4">
                   <div className="flex items-center">
                     <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center shadow-sm">
-                      <DollarSign className="h-6 w-6 text-purple-600" />
+                      <IndianRupee className="h-6 w-6 text-purple-600" />
                     </div>
                     <div className="ml-4">
                       <h3 className="font-semibold text-gray-900">Budget Range</h3>
@@ -1072,7 +1080,7 @@ const BuyOpportunityPage = () => {
                     <div className="space-y-3">
                       <DetailItem label="Finance" value={selectedOpportunity.finance} icon={CreditCard} />
                       {selectedOpportunity.financeAmount && (
-                        <DetailItem label="Finance Amount" value={formatCurrency(selectedOpportunity.financeAmount)} icon={DollarSign} />
+                        <DetailItem label="Finance Amount" value={formatCurrency(selectedOpportunity.financeAmount)} icon={IndianRupee} />
                       )}
                     </div>
                   </div>

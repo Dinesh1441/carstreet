@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit, Trash2, Download, X, ChevronLeft, ChevronRight, AlertCircle, MapPin, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const City = () => {
   // State management
@@ -16,6 +17,7 @@ const City = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isStateDropdownOpen, setIsStateDropdownOpen] = useState(false);
   const [cityToDelete, setCityToDelete] = useState(null);
+  const {token} = useAuth();
   const [currentCity, setCurrentCity] = useState({ 
     _id: '', 
     name: '', 
@@ -40,11 +42,11 @@ const City = () => {
     const fetchData = async () => {
       try {
         // Fetch cities with state population
-        const citiesResponse = await axios.get(`${backendUrl}/api/city/all`);
+        const citiesResponse = await axios.get(`${backendUrl}/api/city/all`, { headers: { 'Authorization': `Bearer ${token}` } });
         console.log('Fetched cities:', citiesResponse.data);
         
         // Fetch states for dropdown
-        const statesResponse = await axios.get(`${backendUrl}/api/state/all`);
+        const statesResponse = await axios.get(`${backendUrl}/api/state/all`, { headers: { 'Authorization': `Bearer ${token}` } });
         console.log('Fetched states:', statesResponse.data);
 
         const citiesData = citiesResponse.data.data || citiesResponse.data.cities || [];
@@ -107,11 +109,11 @@ const City = () => {
       const response = await axios.post(`${backendUrl}/api/city/add`, {
         name: newCity.name,
         state: newCity.state
-      });
+      } , { headers: { 'Authorization': `Bearer ${token}` } });
      
       if(response.data.status === 'success') {
         // Fetch updated cities list to get populated state data
-        const citiesResponse = await axios.get(`${backendUrl}/api/city/all`);
+        const citiesResponse = await axios.get(`${backendUrl}/api/city/all`, { headers: { 'Authorization': `Bearer ${token}` } });
         const citiesData = citiesResponse.data.data || citiesResponse.data.cities || [];
         setCities(citiesData);
         setFilteredCities(citiesData);
@@ -147,11 +149,11 @@ const City = () => {
       const response = await axios.put(`${backendUrl}/api/city/${currentCity._id}`, {
         name: currentCity.name,
         state: currentCity.state
-      });
+      } , { headers: { 'Authorization': `Bearer ${token}` } });
       
       if(response.data.status === 'success') {
         // Fetch updated cities list
-        const citiesResponse = await axios.get(`${backendUrl}/api/city/all`);
+        const citiesResponse = await axios.get(`${backendUrl}/api/city/all`, { headers: { 'Authorization': `Bearer ${token}` } });
         const citiesData = citiesResponse.data.data || citiesResponse.data.cities || [];
         setCities(citiesData);
         setFilteredCities(citiesData);
@@ -173,7 +175,7 @@ const City = () => {
   // Delete a city
   const handleDeleteCity = async () => {
     try {
-      const response = await axios.delete(`${backendUrl}/api/city/${cityToDelete}`);
+      const response = await axios.delete(`${backendUrl}/api/city/${cityToDelete}` , { headers: { 'Authorization': `Bearer ${token}` } });
 
       if(response.data.status === 'success') {
         setCities(cities.filter(city => city._id !== cityToDelete));
@@ -281,13 +283,13 @@ const City = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen py-6 md:py-0">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <div className="flex items-center gap-3">
             <MapPin className="h-8 w-8 text-blue-600" />
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">Cities Management</h1>
+              <h1 className="text-2xl font-bold text-gray-800">Cities Management</h1>
               <p className="text-gray-600 mt-2">Manage your cities and their associated states</p>
             </div>
           </div>
@@ -476,7 +478,7 @@ const City = () => {
 
         {/* Add City Modal */}
         {isAddModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
             <div className="bg-white border border-gray-300 rounded-lg shadow-xl max-w-md w-full p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-800">Add New City</h3>

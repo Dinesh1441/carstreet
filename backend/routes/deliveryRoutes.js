@@ -14,34 +14,34 @@ import {
 } from '../controllers/deliveryController.js';
 
 import { uploadDeliveryFile, handleUploadError, processUploadedFile  } from '../middleware/multer.js';
+import { userAuth } from '../middleware/auth.js';
 
 const deliveryRoutes = express.Router();
 
 deliveryRoutes.route('/')
-  .post(uploadDeliveryFile, handleUploadError, processUploadedFile('deliveryFiles'), createDeliveryForm)
-  .get(getAllDeliveryForms);
+  .post(userAuth, uploadDeliveryFile, handleUploadError, processUploadedFile('deliveryFiles'), createDeliveryForm)
+  .get(userAuth, getAllDeliveryForms);
 
-deliveryRoutes.route('/dashboard/stats')
-  .get(getDeliveryStats);
+deliveryRoutes.route('/dashboard/stats').get(userAuth, getDeliveryStats);
 
 deliveryRoutes.route('/lead/:leadId')
-  .get(getDeliveryFormsByLead);
+  .get(userAuth, getDeliveryFormsByLead);
 
 deliveryRoutes.route('/status/:status')
-  .get(getDeliveryFormsByStatus);
+  .get(userAuth, getDeliveryFormsByStatus);
 
 deliveryRoutes.route('/overdue')
-  .get(getOverdueDeliveryForms);
+  .get(userAuth, getOverdueDeliveryForms);
 
 deliveryRoutes.route('/:id')
-  .get(getDeliveryFormById)
-  .put(uploadDeliveryFile, handleUploadError, processUploadedFile('deliveryFiles'), updateDeliveryForm)
-  .delete(deleteDeliveryForm);
+  .get(userAuth, getDeliveryFormById)
+  .put(userAuth, uploadDeliveryFile, handleUploadError, processUploadedFile('deliveryFiles'), updateDeliveryForm)
+  .delete(userAuth, deleteDeliveryForm);
 
 deliveryRoutes.route('/:id/documents')
-  .post(uploadDeliveryFile, handleUploadError, processUploadedFile('deliveryFiles'), addDocument);
+  .post(userAuth, uploadDeliveryFile, handleUploadError, processUploadedFile('deliveryFiles'), addDocument);
 
 deliveryRoutes.route('/:id/documents/:docId')
-  .delete(removeDocument);
+  .delete(userAuth, removeDocument);
 
 export default deliveryRoutes;

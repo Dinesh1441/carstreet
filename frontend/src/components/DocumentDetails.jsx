@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const DocumentDetails = ({ leadId }) => {
   const [documents, setDocuments] = useState([]);
@@ -19,6 +20,7 @@ const DocumentDetails = ({ leadId }) => {
   const [showDocumentPreview, setShowDocumentPreview] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { token } = useAuth();
   
   // Add ref for search input
   const searchInputRef = useRef(null);
@@ -62,7 +64,7 @@ const DocumentDetails = ({ leadId }) => {
         params.append('search', filters.search);
       }
 
-      const response = await axios.get(`${backendUrl}/api/documents/all?${params.toString()}`);
+      const response = await axios.get(`${backendUrl}/api/documents/all?${params.toString()}`, { headers: { 'Authorization': `Bearer ${token}` } });
       
       if (response.data.status === 'success') {
         setDocuments(response.data.data);
@@ -105,7 +107,7 @@ const DocumentDetails = ({ leadId }) => {
 
   // Get direct file URL for download
   const getFileUrl = (document) => {
-    return `${backendUrl}/uploads/documents/${document.filename}`;
+    return `${backendUrl}/uploads/documents/${document.filename}` ;
   };
 
   // Handle document view
@@ -124,7 +126,7 @@ const DocumentDetails = ({ leadId }) => {
   // Handle document deletion
   const handleDeleteDocument = async (documentId) => {
     try {
-      const response = await axios.delete(`${backendUrl}/api/documents/${documentId}`);
+      const response = await axios.delete(`${backendUrl}/api/documents/${documentId}` , { headers: { 'Authorization': `Bearer ${token}` } });
       
       if (response.data.status === 'success') {
         toast.success('Document deleted successfully');
@@ -552,7 +554,7 @@ const DocumentDetails = ({ leadId }) => {
 
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
             
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+            <div className="inline-block relative align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
               <div className="sm:flex sm:items-start">
                 <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
                   <AlertCircle className="h-6 w-6 text-red-600" />

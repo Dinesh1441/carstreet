@@ -10,7 +10,7 @@ import {
   Calendar,
   FileText,
   Car,
-  DollarSign,
+  IndianRupee,
   Shield,
   MapPin,
   Building,
@@ -32,6 +32,7 @@ import SellOpportunity from '../components/SaleOpportunity';
 import FinanceOpportunity from '../components/FinanceOpportunity';
 import InsuranceOpportunity from '../components/InsuranceOpportunity';
 import RtoOpportunity from '../components/RtoOpportunity';
+import { useAuth } from '../contexts/AuthContext';
 
 const OpportunityDetails = ({ leadId }) => {
   const [opportunities, setOpportunities] = useState({
@@ -59,6 +60,7 @@ const OpportunityDetails = ({ leadId }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [opportunityToDelete, setOpportunityToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const { token } = useAuth();
 
   const backend_url = import.meta.env.VITE_BACKEND_URL;
 
@@ -76,7 +78,7 @@ const OpportunityDetails = ({ leadId }) => {
       ];
 
       const responses = await Promise.allSettled(
-        endpoints.map(endpoint => axios.get(endpoint))
+        endpoints.map(endpoint => axios.get(endpoint, { headers: { 'Authorization': `Bearer ${token}` } }))
       );
 
       const opportunitiesData = {
@@ -236,16 +238,16 @@ const OpportunityDetails = ({ leadId }) => {
       if (endpoint === 'buyopportunity' || endpoint === 'sellopportunity') {
         response = await axios.patch(`${backend_url}/api/${endpoint}/${opportunity._id}/status`, {
           status: newStatus
-        });
+        } , { headers: { 'Authorization': `Bearer ${token}` } });
       } else if (endpoint === 'financeopportunity') {
         response = await axios.patch(`${backend_url}/api/${endpoint}/${opportunity._id}/status`, {
           status: newStatus
-        });
+        } , { headers: { 'Authorization': `Bearer ${token}` } });
       } else {
         // For insurance and rto, use PUT request
         response = await axios.put(`${backend_url}/api/${endpoint}/${opportunity._id}`, {
           status: newStatus
-        });
+        }, { headers: { 'Authorization': `Bearer ${token}` } });
       }
 
       if (response.data.status === 'success') {
@@ -285,7 +287,7 @@ const OpportunityDetails = ({ leadId }) => {
         return;
       }
 
-      const response = await axios.delete(`${backend_url}/api/${endpoint}/${opportunityToDelete._id}`);
+      const response = await axios.delete(`${backend_url}/api/${endpoint}/${opportunityToDelete._id}` , { headers: { 'Authorization': `Bearer ${token}` } });
       
       if (response.data.status === 'success') {
         toast.success(`${opportunityToDelete.typeLabel} deleted successfully`);
@@ -361,7 +363,7 @@ const OpportunityDetails = ({ leadId }) => {
     switch (type) {
       case 'buy': return <Car className="h-4 w-4" />;
       case 'sell': return <Tag className="h-4 w-4" />;
-      case 'finance': return <DollarSign className="h-4 w-4" />;
+      case 'finance': return <IndianRupee className="h-4 w-4" />;
       case 'insurance': return <Shield className="h-4 w-4" />;
       case 'rto': return <MapPin className="h-4 w-4" />;
       default: return <FileText className="h-4 w-4" />;

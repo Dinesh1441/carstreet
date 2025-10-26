@@ -24,6 +24,7 @@ import {
 // Import SheetJS for Excel export
 import * as XLSX from 'xlsx';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 function ManageUser() {
   const [users, setUsers] = useState([]);
@@ -37,6 +38,7 @@ function ManageUser() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { token } = useAuth();
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -45,7 +47,13 @@ function ManageUser() {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${backendUrl}/api/users/all`);
+        const response = await fetch(`${backendUrl}/api/users/all`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+          });
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -120,15 +128,16 @@ function ManageUser() {
   // Handle delete user
   const confirmDeleteUser = (user) => {
     setDeleteModal({ isOpen: true, user });
+    // alert(`Delete user: ${user.username}`);
 
 
   };
 
   const handleDeleteUser = () => {
 
-     axios.delete(`http://localhost:5000/api/users/delete/${deleteModal.user._id}`)  
+     axios.delete(`${backendUrl}/api/users/delete/${deleteModal.user._id}` , { headers: { 'Authorization': `Bearer ${token}` } })  
       .then(response => {
-        if (response.data.status !== "success") {
+        if (response.data.status == "success") {
           setUsers(users.filter(user => user._id !== deleteModal.user._id));
           setDeleteModal({ isOpen: false, user: null });
         }
@@ -241,7 +250,7 @@ function ManageUser() {
     if (user.profileImage) {
       return (
         <img 
-          src={`http://localhost:5000${user.profileImage}`} 
+          src={`${backendUrl}${user.profileImage}`} 
           alt={user.username}
           className="h-10 w-10 rounded-full object-cover"
           onError={(e) => {
@@ -290,7 +299,7 @@ function ManageUser() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen py-6 md:py-0">
       <div className=" mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800">User Management</h1>
@@ -475,7 +484,7 @@ function ManageUser() {
           </div>
 
           {/* Pagination */}
-          <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 sm:px-6 flex flex-col sm:flex-row items-center justify-between">
+          <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 sm:px-6 flex flex-col sm:flex-row md:items-center justify-between">
             <div className="flex items-center mb-4 sm:mb-0">
               <span className="text-sm text-gray-700 mr-2">Show</span>
               <select

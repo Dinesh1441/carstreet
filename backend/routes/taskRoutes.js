@@ -11,17 +11,18 @@ import {
     getOverdueTasks,
     getTasksForReminder
 } from '../controllers/taskController.js';
+import { userAuth } from '../middleware/auth.js';
 
 const tastRoutes = express.Router();
 
-tastRoutes.post('/add', createTask);
-tastRoutes.get('/all', getAllTasks);
-tastRoutes.get('/overdue', getOverdueTasks);
-tastRoutes.get('/reminders', getTasksForReminder);
-tastRoutes.get('/owner/:ownerId', getTasksByOwner);
-tastRoutes.get('/:id', getTaskById);
-tastRoutes.put('/:id', updateTask);
-tastRoutes.put('/:id/complete', markTaskAsCompleted);
-tastRoutes.delete('/:id', deleteTask);
+tastRoutes.post('/add', userAuth, createTask);
+tastRoutes.get('/all', userAuth, getAllTasks);
+tastRoutes.get('/overdue', userAuth, getOverdueTasks);
+tastRoutes.get('/reminders', userAuth, getTasksForReminder);
+tastRoutes.get('/owner/:ownerId', userAuth, getTasksByOwner);
+tastRoutes.get('/:id', userAuth, getTaskById);
+tastRoutes.put('/:id', userAuth, updateTask);
+tastRoutes.put('/:id/complete', userAuth, markTaskAsCompleted);
+tastRoutes.delete('/:id', userAuth, deleteTask);
 
 export default tastRoutes;

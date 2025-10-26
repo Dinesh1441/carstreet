@@ -12,7 +12,7 @@
     X,
     Users,
     TrendingUp,
-    DollarSign,
+    IndianRupee,
     Building,
     Phone,
     Mail,
@@ -39,6 +39,8 @@
   import { toast } from 'react-toastify';
   import * as XLSX from 'xlsx';
   import FinanceOpportunity from '../components/FinanceOpportunity';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
   const FinanceOpportunityPage = () => {
     const [opportunities, setOpportunities] = useState([]);
@@ -65,6 +67,8 @@
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [opportunityToDelete, setOpportunityToDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
+    const { isSuperAdmin, token } = useAuth();
+    const navigate = useNavigate();
     const [dropdownData, setDropdownData] = useState({
       owners: [],
       loanTypes: [],
@@ -92,7 +96,12 @@
           }
         });
 
-        const response = await axios.get(`${backend_url}/api/financeopportunity/all`, { params });
+        const response = await axios.get(`${backend_url}/api/financeopportunity/all`, { 
+          params,
+           headers: { 'Authorization': `Bearer ${token}` } 
+
+
+        } );
 
         if (response.data.status === 'success') {
           setOpportunities(response.data.data);
@@ -109,7 +118,7 @@
     const fetchDropdownData = async () => {
       try {
         const [ownersRes] = await Promise.all([
-          axios.get(`${backend_url}/api/users/all`)
+          axios.get(`${backend_url}/api/users/all` , { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
         setDropdownData({
@@ -225,7 +234,7 @@
       setSelectedOpportunity(opportunity);
       setShowDetailsModal(true);
     };
-
+ 
     // Edit opportunity
     const editOpportunity = (opportunity) => {
       setEditingOpportunity(opportunity);
@@ -244,7 +253,7 @@
 
       try {
         setDeleting(true);
-        const response = await axios.delete(`${backend_url}/api/financeopportunity/${opportunityToDelete._id}`);
+        const response = await axios.delete(`${backend_url}/api/financeopportunity/${opportunityToDelete._id}` , { headers: { 'Authorization': `Bearer ${token}` } });
         
         if (response.data.status === 'success') {
           toast.success('Finance opportunity deleted successfully');
@@ -272,7 +281,7 @@
       try {
         const response = await axios.patch(`${backend_url}/api/financeopportunity/${id}/status`, {
           status: newStatus
-        });
+        } , { headers: { 'Authorization': `Bearer ${token}` } });
 
         if (response.data.status === 'success') {
           toast.success(`Finance opportunity marked as ${newStatus}`);
@@ -360,7 +369,7 @@
     }
 
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen py-6 md:py-0">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -369,13 +378,13 @@
               <p className="text-gray-600 mt-1">Manage and track all finance opportunities</p>
             </div>
             <div className="flex gap-2 mt-4 sm:mt-0">
-              <button 
+              {isSuperAdmin && (<button
                 onClick={exportToExcel}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center transition-colors"
               >
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
                 Export Excel
-              </button>
+              </button> )}
               {/* <button 
                 onClick={() => setShowAddModal(true)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors"
@@ -431,7 +440,7 @@
             <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
               <div className="flex items-center">
                 <div className="p-2 bg-red-100 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-red-600" />
+                  <IndianRupee className="h-6 w-6 text-red-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Rejected</p>
@@ -741,6 +750,13 @@
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
+                          onClick={() => navigate(`/leads/${opportunity.leadId._id}`)}
+                          className="text-blue-600 hover:text-blue-900 transition-colors"
+                          title="View Lead Details"
+                        >
+                          <User className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => editOpportunity(opportunity)}
                           className="text-green-600 hover:text-green-900 transition-colors"
                           title="Edit"
@@ -765,13 +781,14 @@
                             </button>
                           </>
                         )}
-                        <button
-                          onClick={() => showDeleteConfirmation(opportunity)}
-                          className="text-red-600 hover:text-red-900 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => showDeleteConfirmation(opportunity)}
+                            className="text-red-600 hover:text-red-900 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                        </button> )}
                       </div>
                     </td>
                   </tr>
@@ -980,8 +997,8 @@
 
         {/* View Details Modal */}
         {showDetailsModal && selectedOpportunity && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0  flex items-center justify-center p-4 z-50">
+            <div className="bg-white border border-gray-300 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex justify-between items-start mb-6">
                   <div>
@@ -1029,7 +1046,7 @@
                   <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg p-4">
                     <div className="flex items-center">
                       <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center shadow-sm">
-                        <DollarSign className="h-6 w-6 text-green-600" />
+                        <IndianRupee className="h-6 w-6 text-green-600" />
                       </div>
                       <div className="ml-4">
                         <h3 className="font-semibold text-gray-900">Loan Details</h3>
@@ -1067,12 +1084,12 @@
                   <div className="space-y-6">
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <DollarSign className="h-5 w-5 mr-2 text-green-600" />
+                        <IndianRupee className="h-5 w-5 mr-2 text-green-600" />
                         Loan Information
                       </h3>
                       <div className="space-y-3">
                         <DetailItem label="Loan Type" value={selectedOpportunity.loanType} icon={FileText} />
-                        <DetailItem label="Loan Amount" value={formatCurrency(selectedOpportunity.loanAmount)} icon={DollarSign} />
+                        <DetailItem label="Loan Amount" value={formatCurrency(selectedOpportunity.loanAmount)} icon={IndianRupee} />
                         <DetailItem label="Rate of Interest" value={selectedOpportunity.rateOfInterest ? `${selectedOpportunity.rateOfInterest}%` : 'N/A'} icon={Percent} />
                         <DetailItem label="Period of Repayment" value={selectedOpportunity.periodOfRepayment} icon={Calendar} />
                         <DetailItem label="Loan Number" value={selectedOpportunity.loanNumber} icon={CreditCard} />

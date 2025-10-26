@@ -15,6 +15,13 @@ export const getDashboardStats = async (req, res) => {
     try {
         const { startDate, endDate, userId } = req.query;
         
+            let createdBy;
+             // If regular user (not Super Admin) and no userId specified, show only their leads
+            if (req.user.role !== 'Super Admin') {
+                createdBy = req.user.id;
+                
+            }
+            // console.log(createdBy);
         // Build date filter
         const dateFilter = {};
         if (startDate || endDate) {
@@ -30,7 +37,7 @@ export const getDashboardStats = async (req, res) => {
         startOfPreviousWeek.setDate(startOfPreviousWeek.getDate() - 7);
 
         // 1. Lead Statistics
-        const leadStats = await getLeadStatistics(dateFilter, userId);
+        const leadStats = await getLeadStatistics(dateFilter, userId, createdBy);
         
         // 2. Opportunity Statistics
         const opportunityStats = await getOpportunityStatistics(dateFilter, userId);
@@ -77,9 +84,9 @@ export const getDashboardStats = async (req, res) => {
 };
 
 // Lead Statistics
-const getLeadStatistics = async (dateFilter, userId) => {
+const getLeadStatistics = async (dateFilter, userId, createdBy) => {
     const leadFilter = { ...dateFilter };
-    if (userId) leadFilter.assignedTo = userId;
+   
 
     const [
         totalLeads,

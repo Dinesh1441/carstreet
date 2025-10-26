@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit, Trash2, Download, X, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const CarVariant = () => {
   // State management
@@ -15,7 +16,7 @@ const CarVariant = () => {
   const [variantToDelete, setVariantToDelete] = useState(null);
   const [currentVariant, setCurrentVariant] = useState({ _id: '', name: '', model: '' });
   const [newVariant, setNewVariant] = useState({ name: '', model: '' });
-  
+  const { token } = useAuth();
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -28,14 +29,14 @@ const CarVariant = () => {
     const fetchData = async () => {
       try {
         // Fetch variants
-        const variantsResponse = await axios.get(`${backendUrl}/api/variants/all`);
+        const variantsResponse = await axios.get(`${backendUrl}/api/variants/all` , { headers: { 'Authorization': `Bearer ${token}` } } );
         console.log('Fetched variants:', variantsResponse.data.variants);
         setVariants(variantsResponse.data.variants);
         setFilteredVariants(variantsResponse.data.variants);
         setTotalPages(Math.ceil(variantsResponse.data.variants.length / itemsPerPage));
 
         // Fetch models for dropdown
-        const modelsResponse = await axios.get(`${backendUrl}/api/models/all`);
+        const modelsResponse = await axios.get(`${backendUrl}/api/models/all` , { headers: { 'Authorization': `Bearer ${token}` } } );
         console.log('Fetched models:', modelsResponse.data.models);
         setModels(modelsResponse.data.models);
       } catch (error) {
@@ -77,11 +78,11 @@ const CarVariant = () => {
       const response = await axios.post(`${backendUrl}/api/variants/add`, {
         name: newVariant.name,
         model: newVariant.model
-      });
+      } , { headers: { 'Authorization': `Bearer ${token}` } });
      
       if(response.data.status === 'success') {
         // Refetch variants to get the populated model data
-        const variantsResponse = await axios.get(`${backendUrl}/api/variants/all`);
+        const variantsResponse = await axios.get(`${backendUrl}/api/variants/all` , { headers: { 'Authorization': `Bearer ${token}` } });
         setVariants(variantsResponse.data.variants);
         setFilteredVariants(variantsResponse.data.variants);
         toast.success('Variant added successfully');
@@ -106,11 +107,11 @@ const CarVariant = () => {
       const response = await axios.put(`${backendUrl}/api/variants/update/${currentVariant._id}`, {
         name: currentVariant.name,
         model: currentVariant.model
-      });
+      } , { headers: { 'Authorization': `Bearer ${token}` } });
       
       if(response.data.status === 'success') {
         // Refetch variants to get updated data
-        const variantsResponse = await axios.get(`${backendUrl}/api/variants/all`);
+        const variantsResponse = await axios.get(`${backendUrl}/api/variants/all`, { headers: { 'Authorization': `Bearer ${token}` } });
         setVariants(variantsResponse.data.variants);
         setFilteredVariants(variantsResponse.data.variants);
         toast.success('Variant updated successfully');
@@ -126,7 +127,7 @@ const CarVariant = () => {
   // Delete a variant
   const handleDeleteVariant = async () => {
     try {
-      const response = await axios.delete(`${backendUrl}/api/variants/delete/${variantToDelete}`);
+      const response = await axios.delete(`${backendUrl}/api/variants/delete/${variantToDelete}` , { headers: { 'Authorization': `Bearer ${token}` } });
 
       if(response.data.status === 'success') {
         setVariants(variants.filter(variant => variant._id !== variantToDelete));
@@ -182,10 +183,10 @@ const CarVariant = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen py-6 md:py-0">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Car Variants Management</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Car Variants Management</h1>
           <p className="text-gray-600 mt-2">Manage your car variants with ease</p>
         </div>
 

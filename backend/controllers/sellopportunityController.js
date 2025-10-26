@@ -781,6 +781,7 @@ import mongoose from "mongoose";
 
 // Create a new sell opportunity
 export const createSellOpportunity = async (req, res) => {
+
     try {
         const {
             // 1. PERSONAL DETAIL
@@ -841,6 +842,8 @@ export const createSellOpportunity = async (req, res) => {
             });
         }
 
+        const createdBy = req.user ? req.user.id : null;
+
         const newSellOpportunity = new SellOpportunity({
             // 1. PERSONAL DETAIL
             owner,
@@ -889,7 +892,8 @@ export const createSellOpportunity = async (req, res) => {
             rcUpload: rcUpload || [],
             serviceHistory: serviceHistory || [],
 
-            leadId
+            leadId,
+            createdBy 
         });
 
         await newSellOpportunity.save();
@@ -899,31 +903,35 @@ export const createSellOpportunity = async (req, res) => {
             .populate('owner', 'username email')
             .populate('state', 'name')
             .populate('city', 'name')
-            .populate('make', 'name')
+            .populate('make', 'make')
             .populate('model', 'name')
             .populate('variant', 'name')
             .populate('registrationState', 'name')
             .populate('leadId', 'name lastName email phone');
 
+
+            console.log(populatedOpportunity)
+
         // Create activity for opportunity creation
         const activity = new Activity({
             user: owner,
             type: 'sell_opportunity_created',
-            content: `Sell opportunity created for car ${make} ${model}`,
+            content: `Sell opportunity created for car ${populatedOpportunity.make.make} ${populatedOpportunity.model?.name} ${populatedOpportunity.variant?.name || ''}`,
             contentId: newSellOpportunity._id,
+            leadId: newSellOpportunity.leadId,
             metadata: {
-                owner,
-                source,
-                status: status || 'Open',
-                stage,
+                name: populatedOpportunity.leadId.name || "N/A",
+                source : source,
                 email,
                 phoneNumber,
-                make,
-                model,
-                variant,
+                stage,
+                make : populatedOpportunity.make.make || "N/A",
+                model : populatedOpportunity.model.name || "N/A",
+                variant : populatedOpportunity.variant?.name || "N/A",
                 expectedSellingPrice,
                 registrationNumber,
-                leadId
+                status: status || 'Open',
+                
             }
         });
 
@@ -1019,6 +1027,8 @@ export const getAllSellOpportunities = async (req, res) => {
         const sort = {};
         sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
+        if(req.user.role !== 'Super Admin') filter.createdBy = req.user.id;
+
         const opportunities = await SellOpportunity.find(filter)
             .populate('owner', 'username email')
             .populate('state', 'name')
@@ -1039,6 +1049,7 @@ export const getAllSellOpportunities = async (req, res) => {
             status: "success",
             message: "Sell opportunities fetched successfully",
             data: opportunities,
+
             pagination: {
                 currentPage: pageNum,
                 totalPages,
@@ -1132,12 +1143,13 @@ export const updateSellOpportunity = async (req, res) => {
                 message: "Sell opportunity not found"
             });
         }
-
+ 
         // Remove immutable fields
         delete updateData._id;
         delete updateData.createdAt;
         delete updateData.updatedAt;
 
+        console.log(updateData);
         const updatedOpportunity = await SellOpportunity.findByIdAndUpdate(
             id,
             { $set: updateData },
@@ -1169,6 +1181,7 @@ export const updateSellOpportunity = async (req, res) => {
             type: 'sell_opportunity_updated',
             content: `Sell opportunity updated for car ${updatedOpportunity.make?.name || ''} ${updatedOpportunity.model?.name || ''}`,
             contentId: updatedOpportunity._id,
+            leadId: updatedOpportunity.leadId,
             metadata: {
                 previousData: {
                     status: currentOpportunity.status,
@@ -1248,6 +1261,7 @@ export const deleteSellOpportunity = async (req, res) => {
             type: 'sell_opportunity_deleted',
             content: `Sell opportunity deleted for car ${deletedOpportunity.make?.name || ''} ${deletedOpportunity.model?.name || ''}`,
             contentId: deletedOpportunity._id,
+            leadId: deletedOpportunity.leadId,
             metadata: {
                 registrationNumber: deletedOpportunity.registrationNumber,
                 expectedSellingPrice: deletedOpportunity.expectedSellingPrice,
@@ -1474,6 +1488,7 @@ export const updateOpportunityStatus = async (req, res) => {
             type: 'sell_opportunity_status_updated',
             content: `Sell opportunity status changed from "${currentOpportunity.status}" to "${status}" for car ${updatedOpportunity.make?.name || ''} ${updatedOpportunity.model?.name || ''}`,
             contentId: updatedOpportunity._id,
+            leadId: updatedOpportunity.leadId,
             metadata: {
                 previousStatus: currentOpportunity.status,
                 newStatus: status,
@@ -1565,6 +1580,7 @@ export const updateOpportunityStage = async (req, res) => {
             type: 'sell_opportunity_stage_updated',
             content: `Sell opportunity stage changed from "${currentOpportunity.stage}" to "${stage}" for car ${updatedOpportunity.make?.name || ''} ${updatedOpportunity.model?.name || ''}`,
             contentId: updatedOpportunity._id,
+            leadId: updatedOpportunity.leadId,
             metadata: {
                 previousStage: currentOpportunity.stage,
                 newStage: stage,

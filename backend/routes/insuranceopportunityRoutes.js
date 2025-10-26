@@ -9,15 +9,16 @@ import {
     getInsuranceOpportunitiesByLeadId,
     getInsuranceOpportunityStats
 } from '../controllers/insuranceopportunityController.js';
+import { userAuth } from '../middleware/auth.js';
 
 const insuranceOpportunityRoutes = express.Router();
 
-insuranceOpportunityRoutes.post('/add', createInsuranceOpportunity);
-insuranceOpportunityRoutes.get('/all', getAllInsuranceOpportunities);
-insuranceOpportunityRoutes.get('/stats', getInsuranceOpportunityStats);
-insuranceOpportunityRoutes.get('/lead/:leadId', getInsuranceOpportunitiesByLeadId);
-insuranceOpportunityRoutes.get('/:id', getInsuranceOpportunityById);
-insuranceOpportunityRoutes.put('/:id', updateInsuranceOpportunity);
-insuranceOpportunityRoutes.delete('/:id', deleteInsuranceOpportunity);
+insuranceOpportunityRoutes.post('/add', userAuth, createInsuranceOpportunity);
+insuranceOpportunityRoutes.get('/all', userAuth, getAllInsuranceOpportunities);
+insuranceOpportunityRoutes.get('/stats', userAuth, getInsuranceOpportunityStats);
+insuranceOpportunityRoutes.get('/lead/:leadId', userAuth, getInsuranceOpportunitiesByLeadId);
+insuranceOpportunityRoutes.get('/:id', userAuth, getInsuranceOpportunityById);
+insuranceOpportunityRoutes.put('/:id', userAuth, updateInsuranceOpportunity);
+insuranceOpportunityRoutes.delete('/:id', userAuth, deleteInsuranceOpportunity);
 
 export default insuranceOpportunityRoutes;

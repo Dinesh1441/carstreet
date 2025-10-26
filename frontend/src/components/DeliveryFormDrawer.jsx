@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, User, Phone, Car, Truck, Calendar, 
   MapPin, FileText, Upload, Search, 
-  ChevronDown, Check, Loader, Edit
+  ChevronDown, Check, Loader, Edit, AlertCircle
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = false }) => {
   const [loading, setLoading] = useState(false);
@@ -14,6 +15,7 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
   const [cars, setCars] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [existingDocuments, setExistingDocuments] = useState([]);
+  const { token } = useAuth();
   
   const [dropdownOpen, setDropdownOpen] = useState({
     soldBy: false,
@@ -25,6 +27,17 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
   const [searchTerm, setSearchTerm] = useState({
     soldBy: '',
     car: ''
+  });
+
+  // Validation errors state
+  const [errors, setErrors] = useState({
+    name: '',
+    phoneNumber: '',
+    soldBy: '',
+    car: '',
+    deliveryStatus: '',
+    rtoTransferred: '',
+    expectedCompletionDate: ''
   });
 
   const dropdownRefs = {
@@ -54,6 +67,95 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
   
   // RTO options
   const rtoOptions = ['Yes', 'No'];
+
+  // Validation rules
+  const validateField = (name, value) => {
+    let error = '';
+
+    switch (name) {
+      case 'name':
+        if (!value.trim()) {
+          error = 'Name is required';
+        } else if (value.trim().length < 2) {
+          error = 'Name must be at least 2 characters long';
+        }
+        break;
+
+      case 'phoneNumber':
+        if (!value.trim()) {
+          error = 'Phone number is required';
+        } else if (!/^\d{10}$/.test(value.trim())) {
+          error = 'Phone number must be 10 digits';
+        }
+        break;
+
+      case 'soldBy':
+        if (!value) {
+          error = 'Please select a sales person';
+        }
+        break;
+
+      case 'car':
+        if (!value) {
+          error = 'Please select a car';
+        }
+        break;
+
+      case 'deliveryStatus':
+        if (!value) {
+          error = 'Please select delivery status';
+        }
+        break;
+
+      case 'expectedCompletionDate':
+        if (!value) {
+          error = 'Expected completion date is required';
+        } else {
+          const selectedDate = new Date(value);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          if (selectedDate < today) {
+            error = 'Date cannot be in the past';
+          }
+        }
+        break;
+
+      default:
+        break;
+    }
+
+    return error;
+  };
+
+  // Validate all fields
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    Object.keys(formData).forEach(key => {
+      // Only validate required fields
+      if (['name', 'phoneNumber', 'soldBy', 'car', 'deliveryStatus', 'expectedCompletionDate'].includes(key)) {
+        const error = validateField(key, formData[key]);
+        if (error) {
+          newErrors[key] = error;
+          isValid = false;
+        }
+      }
+    });
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  // Validate single field on change
+  const handleFieldValidation = (name, value) => {
+    const error = validateField(name, value);
+    setErrors(prev => ({
+      ...prev,
+      [name]: error
+    }));
+  };
 
   // Fetch users and cars on component mount
   useEffect(() => {
@@ -100,7 +202,7 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get(`${backendUrl}/api/users/all`);
+      const response = await axios.get(`${backendUrl}/api/users/all`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (response.data.status === 'success') {
         setUsers(response.data.data || []);
       }
@@ -112,7 +214,7 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
 
   const fetchCars = async () => {
     try {
-      const response = await axios.get(`${backendUrl}/api/cars/`);
+      const response = await axios.get(`${backendUrl}/api/cars/` , { headers: { 'Authorization': `Bearer ${token}` } });
       let carsData = [];
       
       if (response.data.status === 'success') {
@@ -136,6 +238,9 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
       ...prev, 
       [name]: value 
     }));
+    
+    // Validate the field after change
+    handleFieldValidation(name, value);
   };
 
   const handleSearchChange = (field, value) => {
@@ -162,11 +267,24 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
     setFormData(prev => ({ ...prev, [field]: value }));
     setDropdownOpen(prev => ({ ...prev, [field]: false }));
     setSearchTerm(prev => ({ ...prev, [field]: '' }));
+    
+    // Validate the field after selection
+    handleFieldValidation(field, value);
   };
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    setDocuments(prev => [...prev, ...files]);
+    
+    // Validate file sizes (max 10MB each)
+    const validFiles = files.filter(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`File ${file.name} is too large. Maximum size is 10MB.`);
+        return false;
+      }
+      return true;
+    });
+    
+    setDocuments(prev => [...prev, ...validFiles]);
   };
 
   const removeDocument = (index) => {
@@ -177,7 +295,8 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
     try {
       if (isEdit && deliveryForm?._id) {
         const response = await axios.delete(
-          `${backendUrl}/api/delivery/${deliveryForm._id}/documents/${documentId}`
+          `${backendUrl}/api/delivery/${deliveryForm._id}/documents/${documentId}` ,
+          { headers: { 'Authorization': `Bearer ${token}` } }
         );
         
         if (response.data.success) {
@@ -194,7 +313,8 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
   const downloadDocument = async (fileUrl, fileName) => {
     try {
       const response = await axios.get(`${backendUrl}${fileUrl}`, {
-        responseType: 'blob'
+        responseType: 'blob',
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -255,15 +375,14 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
   };
 
   const handleSubmit = async () => {
+    // Validate all fields before submission
+    if (!validateForm()) {
+      // toast.error('Please fix the validation errors before submitting');
+      return;
+    }
+
     try {
       setSubmitting(true);
-
-      // Validate required fields
-      if (!formData.name || !formData.phoneNumber || !formData.soldBy || !formData.car || !formData.expectedCompletionDate) {
-        toast.error('Please fill all required fields');
-        setSubmitting(false);
-        return;
-      }
 
       const submitData = new FormData();
       
@@ -289,6 +408,7 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
           {
             headers: {
               'Content-Type': 'multipart/form-data',
+              'Authorization': `Bearer ${token}`
             },
           }
         );
@@ -300,6 +420,7 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
           {
             headers: {
               'Content-Type': 'multipart/form-data',
+              'Authorization': `Bearer ${token}`
             },
           }
         );
@@ -325,6 +446,19 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
     }
   };
 
+  // Helper function to render field with error
+  const renderFieldWithError = (fieldName, children) => (
+    <div>
+      {children}
+      {errors[fieldName] && (
+        <div className="flex items-center mt-1 text-red-600 text-sm">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          {errors[fieldName]}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="p-6 h-full flex flex-col">
       <div className="flex justify-between items-center mb-6">
@@ -342,179 +476,199 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
       
       <div className="space-y-4 flex-1 overflow-y-auto">
         {/* Name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-          <div className="relative">
-            <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-            <input 
-              type="text" 
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="w-full pl-9 p-2 border border-gray-300 rounded-md"
-              placeholder="Customer name"
-              disabled={submitting}
-              required
-            />
+        {renderFieldWithError('name',
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+            <div className="relative">
+              <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <input 
+                type="text" 
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className={`w-full pl-9 p-2 border rounded-md ${
+                  errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                }`}
+                placeholder="Customer name"
+                disabled={submitting}
+                required
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Phone Number */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-          <div className="relative">
-            <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-            <input 
-              type="tel" 
-              name="phoneNumber"
-              value={formData.phoneNumber}
-              onChange={handleChange}
-              className="w-full pl-9 p-2 border border-gray-300 rounded-md"
-              placeholder="Phone number"
-              disabled={submitting}
-              required
-            />
+        {renderFieldWithError('phoneNumber',
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <input 
+                type="tel" 
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                className={`w-full pl-9 p-2 border rounded-md ${
+                  errors.phoneNumber ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                }`}
+                placeholder="Phone number"
+                disabled={submitting}
+                required
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Sold By */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Sold By *</label>
-          <div className="relative" ref={dropdownRefs.soldBy}>
-            <button
-              type="button"
-              onClick={() => toggleDropdown('soldBy')}
-              className="w-full p-2 border border-gray-300 rounded-md flex justify-between items-center text-left"
-              disabled={submitting}
-            >
-              <span className={formData.soldBy ? 'text-gray-900' : 'text-gray-500'}>
-                {formData.soldBy ? getUserDisplayName(formData.soldBy) : 'Select user'}
-              </span>
-              <ChevronDown className="h-4 w-4 text-gray-400" />
-            </button>
-            {dropdownOpen.soldBy && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                <div className="p-2 border-b">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                    <input 
-                      type="text" 
-                      placeholder="Type to Search"
-                      className="w-full pl-8 p-1.5 border border-gray-300 rounded text-sm"
-                      value={searchTerm.soldBy}
-                      onChange={(e) => handleSearchChange('soldBy', e.target.value)}
-                      autoFocus
-                    />
-                  </div>
-                </div>
-                {filteredUsers().length > 0 ? (
-                  filteredUsers().map((user) => (
-                    <div
-                      key={user._id}
-                      onClick={() => selectOption('soldBy', user._id)}
-                      className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                    >
-                      <div>
-                        <div className="font-medium">{user.username}</div>
-                        <div className="text-xs text-gray-500">{user.email}</div>
-                      </div>
-                      {formData.soldBy === user._id && <Check className="h-4 w-4 text-blue-500" />}
+        {renderFieldWithError('soldBy',
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sold By *</label>
+            <div className="relative" ref={dropdownRefs.soldBy}>
+              <button
+                type="button"
+                onClick={() => toggleDropdown('soldBy')}
+                className={`w-full p-2 border rounded-md flex justify-between items-center text-left ${
+                  errors.soldBy ? 'border-red-500' : 'border-gray-300'
+                }`}
+                disabled={submitting}
+              >
+                <span className={formData.soldBy ? 'text-gray-900' : 'text-gray-500'}>
+                  {formData.soldBy ? getUserDisplayName(formData.soldBy) : 'Select user'}
+                </span>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </button>
+              {dropdownOpen.soldBy && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div className="p-2 border-b">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Type to Search"
+                        className="w-full pl-8 p-1.5 border border-gray-300 rounded text-sm"
+                        value={searchTerm.soldBy}
+                        onChange={(e) => handleSearchChange('soldBy', e.target.value)}
+                        autoFocus
+                      />
                     </div>
-                  ))
-                ) : (
-                  <div className="p-2 text-gray-500 text-center">No users found</div>
-                )}
-              </div>
-            )}
+                  </div>
+                  {filteredUsers().length > 0 ? (
+                    filteredUsers().map((user) => (
+                      <div
+                        key={user._id}
+                        onClick={() => selectOption('soldBy', user._id)}
+                        className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                      >
+                        <div>
+                          <div className="font-medium">{user.username}</div>
+                          <div className="text-xs text-gray-500">{user.email}</div>
+                        </div>
+                        {formData.soldBy === user._id && <Check className="h-4 w-4 text-blue-500" />}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-2 text-gray-500 text-center">No users found</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Car */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Car *</label>
-          <div className="relative" ref={dropdownRefs.car}>
-            <button
-              type="button"
-              onClick={() => toggleDropdown('car')}
-              className="w-full p-2 border border-gray-300 rounded-md flex justify-between items-center text-left"
-              disabled={submitting}
-            >
-              <span className={formData.car ? 'text-gray-900' : 'text-gray-500'}>
-                {formData.car ? getCarDisplayText(cars.find(c => c._id === formData.car)) : 'Select car'}
-              </span>
-              <ChevronDown className="h-4 w-4 text-gray-400" />
-            </button>
-            {dropdownOpen.car && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                <div className="p-2 border-b">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                    <input 
-                      type="text" 
-                      placeholder="Search cars by registration, brand, model..."
-                      className="w-full pl-8 p-1.5 border border-gray-300 rounded text-sm"
-                      value={searchTerm.car}
-                      onChange={(e) => handleSearchChange('car', e.target.value)}
-                      autoFocus
-                    />
-                  </div>
-                </div>
-                {filteredCars().length > 0 ? (
-                  filteredCars().map((car) => (
-                    <div
-                      key={car._id}
-                      onClick={() => selectOption('car', car._id)}
-                      className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                    >
-                      <div>
-                        <div className="font-medium">
-                          {car.brand?.make || car.brand} {car.model?.name || car.model}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {car.registrationNumber} • {car.color}
-                          {car.variant?.name && ` • ${car.variant.name}`}
-                        </div>
-                      </div>
-                      {formData.car === car._id && <Check className="h-4 w-4 text-blue-500" />}
+        {renderFieldWithError('car',
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Car *</label>
+            <div className="relative" ref={dropdownRefs.car}>
+              <button
+                type="button"
+                onClick={() => toggleDropdown('car')}
+                className={`w-full p-2 border rounded-md flex justify-between items-center text-left ${
+                  errors.car ? 'border-red-500' : 'border-gray-300'
+                }`}
+                disabled={submitting}
+              >
+                <span className={formData.car ? 'text-gray-900' : 'text-gray-500'}>
+                  {formData.car ? getCarDisplayText(cars.find(c => c._id === formData.car)) : 'Select car'}
+                </span>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </button>
+              {dropdownOpen.car && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div className="p-2 border-b">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Search cars by registration, brand, model..."
+                        className="w-full pl-8 p-1.5 border border-gray-300 rounded text-sm"
+                        value={searchTerm.car}
+                        onChange={(e) => handleSearchChange('car', e.target.value)}
+                        autoFocus
+                      />
                     </div>
-                  ))
-                ) : (
-                  <div className="p-2 text-gray-500 text-center">No cars found</div>
-                )}
-              </div>
-            )}
+                  </div>
+                  {filteredCars().length > 0 ? (
+                    filteredCars().map((car) => (
+                      <div
+                        key={car._id}
+                        onClick={() => selectOption('car', car._id)}
+                        className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                      >
+                        <div>
+                          <div className="font-medium">
+                            {car.brand?.make || car.brand} {car.model?.name || car.model}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {car.registrationNumber} • {car.color}
+                            {car.variant?.name && ` • ${car.variant.name}`}
+                          </div>
+                        </div>
+                        {formData.car === car._id && <Check className="h-4 w-4 text-blue-500" />}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-2 text-gray-500 text-center">No cars found</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Delivery Status */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Status *</label>
-          <div className="relative" ref={dropdownRefs.deliveryStatus}>
-            <button
-              type="button"
-              onClick={() => toggleDropdown('deliveryStatus')}
-              className="w-full p-2 border border-gray-300 rounded-md flex justify-between items-center"
-              disabled={submitting}
-            >
-              <span>{formData.deliveryStatus}</span>
-              <ChevronDown className="h-4 w-4 text-gray-400" />
-            </button>
-            {dropdownOpen.deliveryStatus && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
-                {deliveryStatusOptions.map((status) => (
-                  <div
-                    key={status}
-                    onClick={() => selectOption('deliveryStatus', status)}
-                    className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-                  >
-                    <span>{status}</span>
-                    {formData.deliveryStatus === status && <Check className="h-4 w-4 text-blue-500" />}
-                  </div>
-                ))}
-              </div>
-            )}
+        {renderFieldWithError('deliveryStatus',
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Status *</label>
+            <div className="relative" ref={dropdownRefs.deliveryStatus}>
+              <button
+                type="button"
+                onClick={() => toggleDropdown('deliveryStatus')}
+                className={`w-full p-2 border rounded-md flex justify-between items-center ${
+                  errors.deliveryStatus ? 'border-red-500' : 'border-gray-300'
+                }`}
+                disabled={submitting}
+              >
+                <span>{formData.deliveryStatus}</span>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </button>
+              {dropdownOpen.deliveryStatus && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                  {deliveryStatusOptions.map((status) => (
+                    <div
+                      key={status}
+                      onClick={() => selectOption('deliveryStatus', status)}
+                      className="p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                    >
+                      <span>{status}</span>
+                      {formData.deliveryStatus === status && <Check className="h-4 w-4 text-blue-500" />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* RTO Transferred */}
         <div>
@@ -549,21 +703,25 @@ const DeliveryFormDrawer = ({ onClose, onSuccess, lead, deliveryForm, isEdit = f
         </div>
 
         {/* Expected Date of Completion */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Expected Date of Completion *</label>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-            <input 
-              type="date" 
-              name="expectedCompletionDate"
-              value={formData.expectedCompletionDate}
-              onChange={handleChange}
-              className="w-full pl-9 p-2 border border-gray-300 rounded-md"
-              disabled={submitting}
-              required
-            />
+        {renderFieldWithError('expectedCompletionDate',
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Expected Date of Completion *</label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <input 
+                type="date" 
+                name="expectedCompletionDate"
+                value={formData.expectedCompletionDate}
+                onChange={handleChange}
+                className={`w-full pl-9 p-2 border rounded-md ${
+                  errors.expectedCompletionDate ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                }`}
+                disabled={submitting}
+                required
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Document Upload */}
         <div>

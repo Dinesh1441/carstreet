@@ -22,7 +22,7 @@ const DocumentDrawer = ({ onClose, lead, onDocumentAdded }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
-   const { user } = useAuth();
+   const { user, token } = useAuth();
 
   const backend_url = import.meta.env.VITE_BACKEND_URL;
 
@@ -173,6 +173,7 @@ const DocumentDrawer = ({ onClose, lead, onDocumentAdded }) => {
       const response = await axios.post(`${backend_url}/api/documents/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
         },
         onUploadProgress: (progressEvent) => {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);

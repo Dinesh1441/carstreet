@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit, Trash2, Download, X, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const CarModel = () => {
   // State management
@@ -15,6 +16,7 @@ const CarModel = () => {
   const [modelToDelete, setModelToDelete] = useState(null);
   const [currentModel, setCurrentModel] = useState({ _id: '', name: '', make: '' });
   const [newModel, setNewModel] = useState({ name: '', make: '' });
+  const { token } = useAuth();
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -28,14 +30,18 @@ const CarModel = () => {
     const fetchData = async () => {
       try {
         // Fetch models
-        const modelsResponse = await axios.get(`${backendUrl}/api/models/all`);
+        const modelsResponse = await axios.get(`${backendUrl}/api/models/all`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         console.log('Fetched models:', modelsResponse.data.models);
         setModels(modelsResponse.data.models);
         setFilteredModels(modelsResponse.data.models);
         setTotalPages(Math.ceil(modelsResponse.data.models.length / itemsPerPage));
 
         // Fetch makes for dropdown
-        const makesResponse = await axios.get(`${backendUrl}/api/makes/all`);
+        const makesResponse = await axios.get(`${backendUrl}/api/makes/all`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         console.log('Fetched makes:', makesResponse.data.makes);
         setMakes(makesResponse.data.makes);
       } catch (error) {
@@ -76,11 +82,13 @@ const CarModel = () => {
       const response = await axios.post(`${backendUrl}/api/models/add`, {
         name: newModel.name,
         make: newModel.make
-      });
+      } , { headers: { 'Authorization': `Bearer ${token}` } });
      
       if(response.data.status === 'success') {
         // Refetch models to get the populated make data
-        const modelsResponse = await axios.get(`${backendUrl}/api/models/all`);
+        const modelsResponse = await axios.get(`${backendUrl}/api/models/all`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         setModels(modelsResponse.data.models);
         setFilteredModels(modelsResponse.data.models);
         toast.success('Model added successfully');
@@ -105,11 +113,11 @@ const CarModel = () => {
       const response = await axios.put(`${backendUrl}/api/models/update/${currentModel._id}`, {
         name: currentModel.name,
         make: currentModel.make
-      });
+      } , { headers: { 'Authorization': `Bearer ${token}` } } );
       
       if(response.data.status === 'success') {
         // Refetch models to get updated data
-        const modelsResponse = await axios.get(`${backendUrl}/api/models/all`);
+        const modelsResponse = await axios.get(`${backendUrl}/api/models/all` , { headers: { 'Authorization': `Bearer ${token}` } });
         setModels(modelsResponse.data.models);
         setFilteredModels(modelsResponse.data.models);
         toast.success('Model updated successfully');
@@ -125,7 +133,7 @@ const CarModel = () => {
   // Delete a model
   const handleDeleteModel = async () => {
     try {
-      const response = await axios.delete(`${backendUrl}/api/models/delete/${modelToDelete}`);
+      const response = await axios.delete(`${backendUrl}/api/models/delete/${modelToDelete}` , { headers: { 'Authorization': `Bearer ${token}` } });
 
       if(response.data.status === 'success') {
         setModels(models.filter(model => model._id !== modelToDelete));
@@ -179,10 +187,10 @@ const CarModel = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen py-6 md:py-0">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Car Models Management</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Car Models Management</h1>
           <p className="text-gray-600 mt-2">Manage your car models with ease</p>
         </div>
 

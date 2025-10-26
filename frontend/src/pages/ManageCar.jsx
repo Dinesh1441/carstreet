@@ -7,7 +7,7 @@ import {
   Image as ImageIcon,
   FileText,
   Car,
-  DollarSign,
+  IndianRupee,
   BookOpen,
   FileCheck,
   Shield,
@@ -18,6 +18,7 @@ import { toast } from 'react-toastify';
 import { useTable, useSortBy, usePagination, useFilters } from 'react-table';
 import { confirmAlert } from 'react-confirm-alert';
 import 'react-confirm-alert/src/react-confirm-alert.css';
+import { useAuth } from '../contexts/AuthContext';
 
 const ManageCar = () => {
   const backend_url = import.meta.env.VITE_BACKEND_URL;
@@ -52,21 +53,22 @@ const ManageCar = () => {
   const [sortBy, setSortBy] = useState([]);
   const [filters, setFilters] = useState({});
   const [globalSearch, setGlobalSearch] = useState('');
+  const { isSuperAdmin, token } = useAuth();
 
   // Fetch brands, models, and variants
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
         // Fetch brands
-        const brandsResponse = await axios.get(`${backend_url}/api/makes/all`);
+        const brandsResponse = await axios.get(`${backend_url}/api/makes/all`, { headers: { 'Authorization': `Bearer ${token}` } });
         setBrands(brandsResponse.data.makes || []);
 
         // Fetch models
-        const modelsResponse = await axios.get(`${backend_url}/api/models/all`);
+        const modelsResponse = await axios.get(`${backend_url}/api/models/all`, { headers: { 'Authorization': `Bearer ${token}` } });
         setModels(modelsResponse.data.models || []);
 
         // Fetch variants
-        const variantsResponse = await axios.get(`${backend_url}/api/variants/all`);
+        const variantsResponse = await axios.get(`${backend_url}/api/variants/all`, { headers: { 'Authorization': `Bearer ${token}` } });
         setVariants(variantsResponse.data.variants || []);
       } catch (error) {
         console.error('Error fetching dropdown data:', error);
@@ -156,14 +158,14 @@ const ManageCar = () => {
             >
               <Edit className="h-5 w-5" />
             </button>
-            <button
+            {isSuperAdmin && (<button
               onClick={() => confirmDelete(row.original._id)}
               className="text-red-600 hover:text-red-900"
               title="Delete"
               type="button"
             >
               <Trash2 className="h-5 w-5" />
-            </button>
+            </button> )}
           </div>
         ),
       },
@@ -196,7 +198,10 @@ const ManageCar = () => {
         if (value) params[key] = value;
       });
 
-      const res = await axios.get(`${backend_url}/api/cars`, { params });
+      const res = await axios.get(`${backend_url}/api/cars`, { params,
+        headers: { 'Authorization': `Bearer ${token}` } 
+
+       });
 
       if (res.data.status === 'success') {
         setData(res.data.data.cars);
@@ -287,7 +292,7 @@ const ManageCar = () => {
   // Delete car API call
   const deleteCar = async (id) => {
     try {
-      const res = await axios.delete(`${backend_url}/api/cars/delete/${id}`);
+      const res = await axios.delete(`${backend_url}/api/cars/delete/${id}` , { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.data.status === 'success') {
         toast.success('Car deleted successfully');
         fetchData();
@@ -416,6 +421,7 @@ const ManageCar = () => {
       const res = await axios[method](url, apiFormData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -515,7 +521,7 @@ const ManageCar = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen md:py-0 py-6">
       <div className="mx-auto">
         <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <h1 className="text-2xl font-bold text-gray-800">Car Management</h1>
@@ -533,18 +539,19 @@ const ManageCar = () => {
             </div>
             
             <div className="flex space-x-2">
-              <button
-                onClick={exportToCSV}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                title="Export to CSV"
-                type="button"
-              >
+              {isSuperAdmin && (
+                <button
+                  onClick={exportToCSV}
+                  className="flex items-center w-full px-4 py-2 justify-center bg-blue-600 text-white rounded hover:bg-blue-700"
+                  title="Export to CSV"
+                  type="button"
+                >
                 <Download className="h-4 w-4 mr-2" />
                 Export
-              </button>
+              </button> )}
               <button
                 onClick={() => setShowModal(true)}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                className="flex items-center px-4 w-full md:min-w-max justify-center py-2 bg-green-600 text-white rounded hover:bg-green-700"
                 title="Add New Car"
                 type="button"
               >
@@ -615,7 +622,7 @@ const ManageCar = () => {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between py-3">
+        <div className="flex md:items-center justify-between py-3">
           <div>
             <button
               onClick={() => gotoPage(0)}
@@ -649,7 +656,7 @@ const ManageCar = () => {
             >
               {'>>'}
             </button>
-            <span className="ml-4">
+            <span className="md:ml-4 md:inline block">
               Page <strong>{pageIndex + 1} of {pageCount}</strong>
             </span>
           </div>
@@ -672,8 +679,8 @@ const ManageCar = () => {
 
       {/* Add/Edit Car Modal */}
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-50 overflow-auto">
-          <div className="bg-white rounded-lg shadow-xl border border-gray-300 max-w-3xl w-full max-h-screen overflow-y-auto h-[95vh]">
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-50  overflow-auto">
+          <div className="bg-white rounded-lg hide-scrollbar shadow-xl border border-gray-300 max-w-3xl w-full max-h-screen overflow-y-auto h-[95vh]">
             <div className="flex items-center justify-between p-6 border-b">
               <h3 className="text-xl font-semibold text-gray-900 flex items-center">
                 <Car className="h-6 w-6 mr-2 text-blue-600" />
@@ -688,305 +695,330 @@ const ManageCar = () => {
                 <X className="h-6 w-6" />
               </button>
             </div>
+<form onSubmit={handleSubmit} className="p-6 space-y-6">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* Basic Information */}
+    <div className="space-y-3">
+      <h4 className="text-lg font-medium text-gray-900 flex items-center">
+        <Car className="h-5 w-5 mr-2 text-blue-500" />
+        Basic Information
+      </h4>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Basic Information */}
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-gray-900 flex items-center">
-                    <Car className="h-5 w-5 mr-2 text-blue-500" />
-                    Basic Information
-                  </h4>
-                  
-                  {/* Brand Dropdown */}
-                  <select
-                    value={selectedBrand}
-                    onChange={(e) => {
-                      setSelectedBrand(e.target.value);
-                      setSelectedModel('');
-                      setSelectedVariant('');
-                    }}
-                    required
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="">Select Brand</option>
-                    {brands.map((brand) => (
-                      <option key={brand._id} value={brand._id}>
-                        {brand.make}
-                      </option>
-                    ))}
-                  </select>
+      {/* Brand Dropdown */}
+      <label className="block text-sm font-medium text-gray-700">Brand</label>
+      <select
+        value={selectedBrand}
+        onChange={(e) => {
+          setSelectedBrand(e.target.value);
+          setSelectedModel('');
+          setSelectedVariant('');
+        }}
+        required
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      >
+        <option value="">Select Brand</option>
+        {brands.map((brand) => (
+          <option key={brand._id} value={brand._id}>
+            {brand.make}
+          </option>
+        ))}
+      </select>
 
-                  {/* Model Dropdown */}
-                  <select
-                    value={selectedModel}
-                    onChange={(e) => {
-                      setSelectedModel(e.target.value);
-                      setSelectedVariant('');
-                    }}
-                    required
-                    disabled={!selectedBrand}
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="">Select Model</option>
-                    {filteredModels.map((model) => (
-                      <option key={model._id} value={model._id}>
-                        {model.name}
-                      </option>
-                    ))}
-                  </select>
+      {/* Model Dropdown */}
+      <label className="block text-sm font-medium text-gray-700">Model</label>
+      <select
+        value={selectedModel}
+        onChange={(e) => {
+          setSelectedModel(e.target.value);
+          setSelectedVariant('');
+        }}
+        required
+        disabled={!selectedBrand}
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      >
+        <option value="">Select Model</option>
+        {filteredModels.map((model) => (
+          <option key={model._id} value={model._id}>
+            {model.name}
+          </option>
+        ))}
+      </select>
 
-                  {/* Variant Dropdown */}
-                  <select
-                    value={selectedVariant}
-                    onChange={(e) => setSelectedVariant(e.target.value)}
-                    required
-                    disabled={!selectedModel}
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="">Select Variant</option>
-                    {filteredVariants.map((variant) => (
-                      <option key={variant._id} value={variant._id}>
-                        {variant.name}
-                      </option>
-                    ))}
-                    <option value="other">Other</option>
-                  </select>
+      {/* Variant Dropdown */}
+      <label className="block text-sm font-medium text-gray-700">Variant</label>
+      <select
+        value={selectedVariant}
+        onChange={(e) => setSelectedVariant(e.target.value)}
+        required
+        disabled={!selectedModel}
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      >
+        <option value="">Select Variant</option>
+        {filteredVariants.map((variant) => (
+          <option key={variant._id} value={variant._id}>
+            {variant.name}
+          </option>
+        ))}
+        <option value="other">Other</option>
+      </select>
 
-                  <input
-                    type="text"
-                    name="color"
-                    defaultValue={editingCar?.color || ''}
-                    required
-                    placeholder="Color"
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                  <select
-                    name="carType"
-                    defaultValue={editingCar?.carType || ''}
-                    required
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="">Select Car Type</option>
-                    <option value="Automatic">Automatic</option>
-                    <option value="Manual">Manual</option>
-                  </select>
-                </div>
+      <label className="block text-sm font-medium text-gray-700">Color</label>
+      <input
+        type="text"
+        name="color"
+        defaultValue={editingCar?.color || ''}
+        required
+        placeholder="Color"
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
 
-                {/* Specifications */}
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-gray-900 flex items-center">
-                    <BookOpen className="h-5 w-5 mr-2 text-blue-500" />
-                    Specifications
-                  </h4>
-                  <input
-                    type="text"
-                    name="manufacturingYear"
-                    defaultValue={editingCar?.manufacturingYear || ''}
-                    required
-                    placeholder="Manufacturing Year"
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                  <input
-                    type="text"
-                    name="registrationYear"
-                    defaultValue={editingCar?.registrationYear || ''}
-                    required
-                    placeholder="Registration Year"
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                  <input
-                    type="text"
-                    name="numberOfOwners"
-                    defaultValue={editingCar?.numberOfOwners || ''}
-                    required
-                    placeholder="Number of Owners"
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                  <input
-                    type="text"
-                    name="kilometersDriven"
-                    defaultValue={editingCar?.kilometersDriven || ''}
-                    required
-                    placeholder="Kilometers Driven"
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                  <select
-                    name="fuelType"
-                    defaultValue={editingCar?.fuelType || ''}
-                    required
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="">Select Fuel Type</option>
-                    <option value="Diesel">Diesel</option>
-                    <option value="Electric">Electric</option>
-                    <option value="Hybrid">Hybrid</option>
-                    <option value="Petrol">Petrol</option>
-                    <option value="Petrol Hybrid">Petrol Hybrid</option>
-                  </select>
-                </div>
-              </div>
+      <label className="block text-sm font-medium text-gray-700">Car Type</label>
+      <select
+        name="carType"
+        defaultValue={editingCar?.carType || ''}
+        required
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      >
+        <option value="">Select Car Type</option>
+        <option value="Automatic">Automatic</option>
+        <option value="Manual">Manual</option>
+      </select>
+    </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Registration Details */}
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-gray-900 flex items-center">
-                    <FileCheck className="h-5 w-5 mr-2 text-blue-500" />
-                    Registration Details
-                  </h4>
-                  <input
-                    type="text"
-                    name="registrationState"
-                    defaultValue={editingCar?.registrationState || ''}
-                    required
-                    placeholder="Registration State"
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                  <input
-                    type="text"
-                    name="registrationNumber"
-                    defaultValue={editingCar?.registrationNumber || ''}
-                    required
-                    placeholder="Registration Number"
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                </div>
+    {/* Specifications */}
+    <div className="space-y-3">
+      <h4 className="text-lg font-medium text-gray-900 flex items-center">
+        <BookOpen className="h-5 w-5 mr-2 text-blue-500" />
+        Specifications
+      </h4>
 
-                {/* Insurance & Warranty */}
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-gray-900 flex items-center">
-                    <Shield className="h-5 w-5 mr-2 text-blue-500" />
-                    Insurance & Warranty
-                  </h4>
-                  <input
-                    type="text"
-                    name="insuranceValidity"
-                    defaultValue={editingCar?.insuranceValidity || ''}
-                    required
-                    placeholder="Insurance Validity"
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                  <select
-                    name="insuranceType"
-                    defaultValue={editingCar?.insuranceType || ''}
-                    required
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="">Select Insurance Type</option>
-                    <option value="No Insurance">No Insurance</option>
-                    <option value="Comprehensive">Comprehensive</option>
-                    <option value="Zero-Depreciation">Zero-Depreciation</option>
-                    <option value="Third Party">Third Party</option>
-                  </select>
-                  <input
-                    type="text"
-                    name="warrantyValidity"
-                    defaultValue={editingCar?.warrantyValidity || ''}
-                    required
-                    placeholder="Warranty Validity"
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                </div>
-              </div>
+      <label className="block text-sm font-medium text-gray-700">Manufacturing Year</label>
+      <input
+        type="month"
+        name="manufacturingYear"
+        defaultValue={editingCar?.manufacturingYear || ''}
+        required
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Pricing & Status */}
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-gray-900 flex items-center">
-                    <DollarSign className="h-5 w-5 mr-2 text-blue-500" />
-                    Pricing & Status
-                  </h4>
-                                    <input
-                    type="number"
-                    name="askingPrice"
-                    defaultValue={editingCar?.askingPrice || ''}
-                    required
-                    placeholder="Asking Price"
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                  <select
-                    name="status"
-                    defaultValue={editingCar?.status || ''}
-                    required
-                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="">Select Status</option>
-                    <option value="Available">Available</option>
-                    <option value="Sold">Sold</option>
-                    <option value="Reserved">Reserved</option>
-                    <option value="Under Maintenance">Under Maintenance</option>
-                  </select>
-                </div>
+      <label className="block text-sm font-medium text-gray-700">Registration Year</label>
+      <input
+        type="month"
+        name="registrationYear"
+        defaultValue={editingCar?.registrationYear || ''}
+        required
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
 
-                {/* Image & Document Upload */}
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-gray-900 flex items-center">
-                    <ImageIcon className="h-5 w-5 mr-2 text-blue-500" />
-                    Uploads
-                  </h4>
-                  
-                  {/* Image Upload */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Car Image
-                    </label>
-                    <input
-                      ref={imageInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    {imagePreview && (
-                      <div className="mt-2">
-                        <img
-                          src={imagePreview}
-                          alt="Preview"
-                          className="h-20 w-20 object-cover rounded border"
-                        />
-                      </div>
-                    )}
-                  </div>
+      <label className="block text-sm font-medium text-gray-700">Number of Owners</label>
+      
+      <select
+        name="numberOfOwners"
+        defaultValue={editingCar?.numberOfOwners || ''}
+        required
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      >
+        <option value="">Select Number of Owners</option>
+        <option value="1st">1st</option>
+        <option value="2nd">2nd</option>
+        <option value="3rd">3rd</option>
+        <option value="4th">4th</option>
+      </select>
 
-                  {/* Document Upload */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Car Document
-                    </label>
-                    <input
-                      ref={documentInputRef}
-                      type="file"
-                      accept=".pdf,.doc,.docx,.txt"
-                      onChange={handleDocumentChange}
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    {documentPreview && (
-                      <div className="mt-2 flex items-center text-sm text-gray-600">
-                        <FileText className="h-4 w-4 mr-1" />
-                        {documentPreview.name}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+      <label className="block text-sm font-medium text-gray-700">Kilometers Driven</label>
+      <input
+        type="text"
+        name="kilometersDriven"
+        defaultValue={editingCar?.kilometersDriven || ''}
+        required
+        placeholder="Kilometers Driven"
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
 
-              {/* Form Actions */}
-              <div className="flex justify-end space-x-3 pt-6 border-t">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  {editingCar ? 'Update Car' : 'Add Car'}
-                </button>
-              </div>
-            </form>
+      <label className="block text-sm font-medium text-gray-700">Fuel Type</label>
+      <select
+        name="fuelType"
+        defaultValue={editingCar?.fuelType || ''}
+        required
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      >
+        <option value="">Select Fuel Type</option>
+        <option value="Diesel">Diesel</option>
+        <option value="Electric">Electric</option>
+        <option value="Hybrid">Hybrid</option>
+        <option value="Petrol">Petrol</option>
+        <option value="Petrol Hybrid">Petrol Hybrid</option>
+      </select>
+    </div>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* Registration Details */}
+    <div className="space-y-4">
+      <h4 className="text-lg font-medium text-gray-900 flex items-center">
+        <FileCheck className="h-5 w-5 mr-2 text-blue-500" />
+        Registration Details
+      </h4>
+
+      <label className="block text-sm font-medium text-gray-700">Registration State</label>
+      <input
+        type="text"
+        name="registrationState"
+        defaultValue={editingCar?.registrationState || ''}
+        required
+        placeholder="Registration State"
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
+
+      <label className="block text-sm font-medium text-gray-700">Registration Number</label>
+      <input
+        type="text"
+        name="registrationNumber"
+        defaultValue={editingCar?.registrationNumber || ''}
+        required
+        placeholder="Registration Number"
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
+    </div>
+
+    {/* Insurance & Warranty */}
+    <div className="space-y-4">
+      <h4 className="text-lg font-medium text-gray-900 flex items-center">
+        <Shield className="h-5 w-5 mr-2 text-blue-500" />
+        Insurance & Warranty
+      </h4>
+
+      <label className="block text-sm font-medium text-gray-700">Insurance Validity</label>
+      <input
+        type="text"
+        name="insuranceValidity"
+        defaultValue={editingCar?.insuranceValidity || ''}
+        required
+        placeholder="Insurance Validity"
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
+
+      <label className="block text-sm font-medium text-gray-700">Insurance Type</label>
+      <select
+        name="insuranceType"
+        defaultValue={editingCar?.insuranceType || ''}
+        required
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      >
+        <option value="">Select Insurance Type</option>
+        <option value="No Insurance">No Insurance</option>
+        <option value="Comprehensive">Comprehensive</option>
+        <option value="Zero-Depreciation">Zero-Depreciation</option>
+        <option value="Third Party">Third Party</option>
+      </select>
+
+      <label className="block text-sm font-medium text-gray-700">Warranty Validity</label>
+      <input
+        type="text"
+        name="warrantyValidity"
+        defaultValue={editingCar?.warrantyValidity || ''}
+        required
+        placeholder="Warranty Validity"
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
+    </div>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* Pricing & Status */}
+    <div className="space-y-4">
+      <h4 className="text-lg font-medium text-gray-900 flex items-center">
+        <IndianRupee className="h-5 w-5 mr-2 text-blue-500" />
+        Pricing & Status
+      </h4>
+
+      <label className="block text-sm font-medium text-gray-700">Asking Price</label>
+      <input
+        type="number"
+        name="askingPrice"
+        defaultValue={editingCar?.askingPrice || ''}
+        required
+        placeholder="Asking Price"
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
+
+      <label className="block text-sm font-medium text-gray-700">Status</label>
+      <select
+        name="status"
+        defaultValue={editingCar?.status || ''}
+        required
+        className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      >
+        <option value="">Select Status</option>
+        <option value="Available">Available</option>
+        <option value="Sold">Sold</option>
+        <option value="Reserved">Reserved</option>
+        <option value="Under Maintenance">Under Maintenance</option>
+      </select>
+    </div>
+
+    {/* Uploads */}
+    <div className="space-y-4">
+      <h4 className="text-lg font-medium text-gray-900 flex items-center">
+        <ImageIcon className="h-5 w-5 mr-2 text-blue-500" />
+        Uploads
+      </h4>
+
+      {/* Car Image */}
+      <label className="block text-sm font-medium text-gray-700">Car Image</label>
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageChange}
+        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+      />
+      {imagePreview && (
+        <div className="mt-2">
+          <img
+            src={imagePreview}
+            alt="Preview"
+            className="h-20 w-20 object-cover rounded border"
+          />
+        </div>
+      )}
+
+      {/* Car Document */}
+      <label className="block text-sm font-medium text-gray-700">Car Document</label>
+      <input
+        ref={documentInputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.txt"
+        onChange={handleDocumentChange}
+        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+      />
+      {documentPreview && (
+        <div className="mt-2 flex items-center text-sm text-gray-600">
+          <FileText className="h-4 w-4 mr-1" />
+          {documentPreview.name}
+        </div>
+      )}
+    </div>
+  </div>
+
+  {/* Form Actions */}
+  <div className="flex justify-end space-x-3 pt-6 border-t">
+    <button
+      type="button"
+      onClick={closeModal}
+      className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+    >
+      Cancel
+    </button>
+    <button
+      type="submit"
+      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+    >
+      {editingCar ? 'Update Car' : 'Add Car'}
+    </button>
+  </div>
+</form>
+
           </div>
         </div>
       )}

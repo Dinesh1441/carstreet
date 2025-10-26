@@ -30,6 +30,7 @@ import TaskDetails from '../components/TaskDetails';
 import NoteDetails from '../components/NoteDetails';
 import DocumentDetails from '../components/DocumentDetails';
 import AddLead from '../components/AddLead';
+import ActivityTimeline from '../components/ActivityTimeline';
 // import FinanceOpportunity from '../components/FinanceOpportunity';
 // import InsuranceOpportunity from '../components/InsuranceOpportunity';
 // import RioOpportunity from '../components/RioOpportunity';
@@ -54,7 +55,7 @@ const LeadDetails = () => {
   const quillRef = useRef(null);
   const fileInputRef = useRef(null);
   const submenuRefs = useRef({});
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -110,7 +111,11 @@ const LeadDetails = () => {
     const fetchLead = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${backendUrl}/api/leads/get/${id}`);
+        const response = await axios.get(`${backendUrl}/api/leads/get/${id}`
+          , { headers: {
+              'Authorization': `Bearer ${token}`
+            }  }
+        );
         
         if (response.data.status === "success") {
           setLead(response.data.data);
@@ -195,8 +200,10 @@ const LeadDetails = () => {
     try {
       // Create FormData to handle file uploads
       const formData = new FormData();
+     
       formData.append('leadId', id);
       formData.append('noteText', noteContent);
+
       formData.append('user', user._id);
       attachments.forEach((attachment, index) => {
         formData.append(`attachments`, attachment.file);
@@ -205,7 +212,8 @@ const LeadDetails = () => {
       // Send the note to the backend
       const response = await axios.post(`${backendUrl}/api/notes/add`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -224,7 +232,7 @@ const LeadDetails = () => {
 
   // Quick action buttons with flexible submenu system
   const quickActions = [
-    { id: 'activity', label: 'Activity', icon: ActivityIcon, color: 'bg-blue-500' },
+    // { id: 'activity', label: 'Activity', icon: ActivityIcon, color: 'bg-blue-500' },
     { id: 'note', label: 'Note', icon: StickyNote, color: 'bg-green-500' },
     { 
       id: 'opportunity', 
@@ -258,7 +266,7 @@ const LeadDetails = () => {
         },
         { 
           id: 'sale', 
-          label: 'Sale Opportunity', 
+          label: 'Sell Opportunity', 
           icon: Tag, 
           drawerContent: 'sale-opportunity' 
         }
@@ -420,7 +428,7 @@ const LeadDetails = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 block lg:flex  justify-between items-center">
+      <div className="bg-white mt-4  md:mt-0 border-b border-gray-200 px-4 py-3 block lg:flex  justify-between items-center">
         <div className="flex items-center">
           <button 
             onClick={() => navigate('/leads')}
@@ -431,26 +439,26 @@ const LeadDetails = () => {
           <h1 className="text-xl font-semibold text-gray-800">Lead Details</h1>
         </div>
 
-        <div className="flex gap-3 mt-3 lg:mt-0">
+        <div className="flex gap-3 mt-3 lg:mt-0 overflow-x-auto py-1 md:py-0 inset-shadow-md 41 to 50 of 53 activities ">
           {quickActions.map((action) => {
             const IconComponent = action.icon;
             
             if (action.submenu) {
               return (
-                <div key={action.id} className="relative w-full" ref={el => submenuRefs.current[action.id] = el}>
+                <div key={action.id} className=" w-full" ref={el => submenuRefs.current[action.id] = el}>
                   <button
                     onClick={() => handleSubmenuClick(action.id)}
                     className="flex gap-2 items-center justify-center px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors relative"
                   >
-                    <div className={`h-4 w-4 rounded-full flex items-center justify-center ${action.color}`}>
-                      <IconComponent className="h-5 w-5 text-white" />
+                    <div className={`h-4 w-4  rounded-full flex items-center justify-center `}>
+                      <IconComponent className="h-5 w-5 " />
                     </div>
                     <span className="text-xs text-gray-700">{action.label}</span>
                     <ChevronDown className="h-3 w-3 text-gray-500" />
                   </button>
                   
                   {openSubmenu === action.id && (
-                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                    <div className="absolute md:right-75 sm:right-0  mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
                       {action.submenu.map((item) => {
                         const ItemIcon = item.icon;
                         return (
@@ -477,8 +485,8 @@ const LeadDetails = () => {
                 onClick={() => openDrawer(action.id)}
                 className="flex gap-2 min-w-fit items-center justify-center px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                <div className={`h-4 w-4 rounded-full flex items-center justify-center ${action.color}`}>
-                  <IconComponent className="h-5 w-5 text-white" />
+                <div className={`h-4 w-4 rounded-full flex items-center justify-center `}>
+                  <IconComponent className="h-5 w-5" />
                 </div>
                 <span className="text-xs text-gray-700">{action.label}</span>
               </button>
@@ -640,8 +648,8 @@ const LeadDetails = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-2 md:p-2">
-          <div className="bg-white rounded-sm shadow-sm border border-gray-200 p-6">
+        <div className="flex-1 p-0 mt-3 md:mt-0 md:p-2">
+          <div className="bg-white rounded-sm shadow-sm border border-gray-200  p-2 md:p-6">
             {/* Tabs */}
             <div className="border-b border-gray-200 mb-6">
               <nav className="flex overflow-x-auto -mb-px">
@@ -676,7 +684,7 @@ const LeadDetails = () => {
             <div>
               {/* Details Tab */}
               {activeTab === 'details' && (
-                <div>
+                <div className="px-4">
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-semibold text-gray-800">Lead Details</h2>
                     <button onClick={() => { setShowLeadDrawer(true); setDrawerMode('edit'); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center text-sm">
@@ -782,34 +790,22 @@ const LeadDetails = () => {
                 </div>
               )}
 
-              {/* Activity Tab */}
-              {activeTab === 'activity' && (
-                <div>
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-semibold text-gray-800">Activity History</h2>
-                    {/* <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center text-sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Activity
-                    </button> */}
+             {/* // In LeadDetails.jsx - Update the activity tab section */}
+                {activeTab === 'activity' && (
+                  <div>
+                    {/* <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-semibold text-gray-800">Activity History</h2>
+                      <button 
+                        onClick={() => openDrawer('activity')}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center text-sm"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Activity
+                      </button>
+                    </div>
+                     */}
+                    <ActivityTimeline leadId={id} />
                   </div>
-                  
-                  <div className="space-y-6">
-                    {activities.map((activity, index) => (
-                      <div key={index} className="border-l-2 border-blue-200 pl-4 relative">
-                        <div className="absolute -left-1.5 top-0 w-3 h-3 bg-blue-500 rounded-full"></div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-2">{activity.date}</h3>
-                        
-                        <div className="space-y-3">
-                          {activity.events.map((event, eventIndex) => (
-                            <div key={eventIndex} className="bg-gray-50 p-4 rounded-lg">
-                              <p className="text-gray-800">{event}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               )}
 
               {/* Opportunities Tab */}
@@ -890,14 +886,14 @@ const LeadDetails = () => {
           <div className="absolute inset-0 overflow-hidden">
             <div 
               className="absolute inset-0 bg-gray-300 opacity-75 transition-opacity" 
-              onClick={closeDrawer}
+              onClick={() => setShowLeadDrawer(false)}
             ></div>
             
             <div className="fixed inset-y-0 right-0 max-w-full flex">
               <div className="w-screen max-w-4xl">
                 <div className="h-full flex flex-col bg-white shadow-xl overflow-y-auto">
                   <AddLead
-                    onClose={closeDrawer}
+                    onClose={() => setShowLeadDrawer(false)}
                     onSuccess={() => {
                       
                       setShowLeadDrawer(false);

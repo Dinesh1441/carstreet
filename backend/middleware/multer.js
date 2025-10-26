@@ -395,6 +395,11 @@ export const uploadConfigs = {
       fileSize: 10 * 1024 * 1024 // 10MB limit for documents
     },
     fileFilter: createFileFilter([
+      'image/jpeg', 
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'text/plain',
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

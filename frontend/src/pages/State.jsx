@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit, Trash2, Download, X, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const State = () => {
   // State management
@@ -14,6 +15,7 @@ const State = () => {
   const [stateToDelete, setStateToDelete] = useState(null);
   const [currentState, setCurrentState] = useState({ _id: '', name: '' });
   const [newState, setNewState] = useState({ name: '' });
+  const { token } = useAuth();
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,7 +28,7 @@ const State = () => {
   useEffect(() => {
     const allStates = async () => {
       try {
-        const response = await axios.get(`${backendUrl}/api/state/all`);
+        const response = await axios.get(`${backendUrl}/api/state/all`, { headers: { 'Authorization': `Bearer ${token}` } });
         console.log('Fetched states:', response.data.states);
         setStates(response.data.states);
         setFilteredStates(response.data.states);
@@ -67,7 +69,7 @@ const State = () => {
     try {
       const response = await axios.post(`${backendUrl}/api/state/add`, {
         name: newState.name
-      });
+      } , { headers: {  'Authorization': `Bearer ${token}` } });
      
       if(response.data.status === 'success') {
         setStates([...states, response.data.state]);
@@ -93,7 +95,7 @@ const State = () => {
     try {
       const response = await axios.put(`${backendUrl}/api/state/update/${currentState._id}`, {
         name: currentState.name
-      });
+      } , { headers: { 'Authorization': `Bearer ${token}` } } );
       
       if(response.data.status === 'success') {
         setStates(states.map(state =>
@@ -115,7 +117,7 @@ const State = () => {
   // Delete a state
   const handleDeleteState = async () => {
     try {
-      const response = await axios.delete(`${backendUrl}/api/state/delete/${stateToDelete}`);
+      const response = await axios.delete(`${backendUrl}/api/state/delete/${stateToDelete}` , { headers: { 'Authorization': `Bearer ${token}` } });
 
       if(response.data.status === 'success') {
         setStates(states.filter(state => state._id !== stateToDelete));
@@ -165,10 +167,10 @@ const State = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen py-6 md:py-0">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">States Management</h1>
+          <h1 className="text-2xl font-bold text-gray-800">States Management</h1>
           <p className="text-gray-600 mt-2">Manage your states with ease</p>
         </div>
 

@@ -61,7 +61,7 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
             <h1 className="text-xl font-bold text-gray-800">CRMPro</h1>
             <p className="text-xs text-gray-500 -mt-1">Customer Relationship Management</p>
           </div>
-          <img src="http://localhost:5173/src/assets/img/carstreet.png" className=" h-8" alt="" />
+          <img src="http://localhost:5173/src/assets/img/carstreet.png" className=" md:h-8 h-6" alt="" />
         </div>
       </div>
       

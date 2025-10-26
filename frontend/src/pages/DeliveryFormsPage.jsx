@@ -12,7 +12,7 @@ import {
   X,
   Users,
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   Car,
   Phone,
   Mail,
@@ -42,6 +42,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import * as XLSX from 'xlsx';
 import DeliveryFormDrawer from '../components/DeliveryFormDrawer';
+import { useAuth } from '../contexts/AuthContext';
 
 const DeliveryFormsPage = () => {
   const [deliveryForms, setDeliveryForms] = useState([]);
@@ -70,6 +71,7 @@ const DeliveryFormsPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [formToDelete, setFormToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const { isSuperAdmin, token } = useAuth();
 
   const backend_url = import.meta.env.VITE_BACKEND_URL;
 
@@ -77,7 +79,7 @@ const DeliveryFormsPage = () => {
   const fetchDeliveryForms = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${backend_url}/api/delivery`);
+      const response = await axios.get(`${backend_url}/api/delivery`, { headers: { 'Authorization': `Bearer ${token}` } });
 
       if (response.data.success) {
         setDeliveryForms(response.data.data || []);
@@ -94,8 +96,8 @@ const DeliveryFormsPage = () => {
   const fetchDropdownData = async () => {
     try {
       const [usersRes, carsRes] = await Promise.all([
-        axios.get(`${backend_url}/api/users/all`),
-        axios.get(`${backend_url}/api/cars`)
+        axios.get(`${backend_url}/api/users/all`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        axios.get(`${backend_url}/api/cars`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
       setDropdownData({
@@ -304,7 +306,7 @@ const DeliveryFormsPage = () => {
 
     try {
       setDeleting(true);
-      const response = await axios.delete(`${backend_url}/api/delivery/${formToDelete._id}`);
+      const response = await axios.delete(`${backend_url}/api/delivery/${formToDelete._id}` , { headers: { 'Authorization': `Bearer ${token}` } });
       
       if (response.data.success) {
         toast.success('Delivery form deleted successfully');
@@ -333,7 +335,7 @@ const DeliveryFormsPage = () => {
       const response = await axios.put(`${backend_url}/api/delivery/${form._id}`, {
         deliveryStatus: 'Delivered',
         actualDeliveryDate: new Date().toISOString()
-      });
+      }, { headers: { 'Authorization': `Bearer ${token}` } });
 
       if (response.data.success) {
         toast.success('Delivery form marked as delivered');
@@ -428,22 +430,24 @@ const DeliveryFormsPage = () => {
   // Only the search functionality and getCarDisplayText function have been fixed
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen py-6 md:py-0">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-8 ">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Delivery Forms</h1>
             <p className="text-gray-600 mt-1">Manage and track all vehicle delivery forms</p>
           </div>
           <div className="flex gap-2 mt-4 sm:mt-0">
-            <button 
-              onClick={exportToExcel}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center transition-colors"
-            >
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Export Excel
-            </button>
+            {isSuperAdmin && (
+              <button
+                onClick={exportToExcel}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center transition-colors"
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Export Excel
+              </button>
+            )}
           </div>
         </div>
 
@@ -790,22 +794,26 @@ const DeliveryFormsPage = () => {
                         
                         {/* DOWNLOAD DOCUMENTS Button - Only show if documents exist */}
                         {form.documents && form.documents.length > 0 && (
-                          <button
-                            onClick={() => downloadDocument(form.documents[0])}
+                          <a
+                            href={`${backend_url}${form.documents[0].fileUrl}`}
+                            download
+                            target='_blank'
                             className="text-purple-600 hover:text-purple-900 transition-colors"
                             title="Download Document"
                           >
                             <Download className="h-4 w-4" />
+                          </a>
+                        )}
+
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => confirmDelete(form)}
+                            className="text-red-600 hover:text-red-900 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         )}
-                        
-                        <button
-                          onClick={() => confirmDelete(form)}
-                          className="text-red-600 hover:text-red-900 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -959,7 +967,7 @@ const DeliveryFormsPage = () => {
       {/* View Details Modal */}
       {showDetailsModal && selectedForm && (
         <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-300 overflow-hidden">
+          <div className="bg-white rounded-lg hide-scrollbar max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-300 overflow-hidden">
             <div className="p-6">
               {/* Header */}
               <div className="flex justify-between items-start mb-6">

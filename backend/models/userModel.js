@@ -21,9 +21,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Password hash is required']
   },
-  role: {
+  role: { 
     type: String,
-    enum: ['Super Admin', 'Team Member', 'Sales Executive', 'Finance Department'],
+    enum: ['Super Admin', 'Sales Executive', 'Finance Department', 'Insurance Department', 'RTO Department'],
     default: 'Team Member'
   },
   status: {

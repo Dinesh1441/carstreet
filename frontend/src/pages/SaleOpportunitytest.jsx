@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, ChevronDown, User, Mail, Phone, MapPin, Car, Calendar, 
-  FileText, Upload, Eye, EyeOff, Check, Search, DollarSign,
+  FileText, Upload, Eye, EyeOff, Check, Search, IndianRupee,
   Shield, Key, Wrench, Image
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead }) => {
   const [formData, setFormData] = useState({
@@ -85,6 +86,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
   const [showMakeDropdown, setShowMakeDropdown] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showVariantDropdown, setShowVariantDropdown] = useState(false);
+  const {token} = useAuth();
 
   // File upload states
   const [uploadingFiles, setUploadingFiles] = useState({
@@ -133,9 +135,9 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
       try {
         setLoading(true);
         const [ownersRes, statesRes, makesRes] = await Promise.all([
-          axios.get(`${backend_url}/api/users/all`),
-          axios.get(`${backend_url}/api/state/all`),
-          axios.get(`${backend_url}/api/makes/all`)
+          axios.get(`${backend_url}/api/users/all` , { headers: { 'Authorization': `Bearer ${token}` } }  ),
+          axios.get(`${backend_url}/api/state/all` , { headers: { 'Authorization': `Bearer ${token}` } }  ),
+          axios.get(`${backend_url}/api/makes/all` , { headers: { 'Authorization': `Bearer ${token}` } }  )
         ]);
 
         setOwners(ownersRes.data.data || ownersRes.data.users || []);
@@ -157,7 +159,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
     const fetchCities = async () => {
       if (formData.state) {
         try {
-          const response = await axios.get(`${backend_url}/api/city/state/${formData.state}`);
+          const response = await axios.get(`${backend_url}/api/city/state/${formData.state}` , { headers: { 'Authorization': `Bearer ${token}` } });
           setCities(response.data.data || response.data.cities || []);
         } catch (error) {
           console.error('Error fetching cities:', error);
@@ -176,7 +178,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
     const fetchModels = async () => {
       if (formData.make) {
         try {
-          const response = await axios.get(`${backend_url}/api/models/make/${formData.make}`);
+          const response = await axios.get(`${backend_url}/api/models/make/${formData.make}` , { headers: { 'Authorization': `Bearer ${token}` } });
           setModels(response.data.models || response.data.data || []);
         } catch (error) {
           console.error('Error fetching models:', error);
@@ -196,7 +198,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
     const fetchVariants = async () => {
       if (formData.model) {
         try {
-          const response = await axios.get(`${backend_url}/api/variants/model/${formData.model}`);
+          const response = await axios.get(`${backend_url}/api/variants/model/${formData.model}` , { headers: { 'Authorization': `Bearer ${token}` } });
           setVariants(response.data.variants || response.data.data || []);
         } catch (error) {
           console.error('Error fetching variants:', error);
@@ -236,7 +238,10 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
       });
 
       const response = await axios.post(`${backend_url}/api/upload/${fieldName}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data'
+        , 'Authorization': `Bearer ${token}`
+         }
+
       });
 
       if (response.data.status === 'success') {
@@ -349,9 +354,9 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
 
       let response;
       if (isEdit && opportunity) {
-        response = await axios.put(`${backend_url}/api/sellopportunity/${opportunity._id}`, opportunityData);
+        response = await axios.put(`${backend_url}/api/sellopportunity/${opportunity._id}`, opportunityData , { headers: { 'Authorization': `Bearer ${token}` } } );
       } else {
-        response = await axios.post(`${backend_url}/api/sellopportunity/add`, opportunityData);
+        response = await axios.post(`${backend_url}/api/sellopportunity/add`, opportunityData , { headers: { 'Authorization': `Bearer ${token}` } } );
       }
 
       if (response.data.status === 'success') {
@@ -435,7 +440,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
   };
 
   return (
-    <div className="p-6 h-full flex flex-col bg-white rounded-lg">
+    <div className=" h-full flex flex-col bg-white rounded-lg">
       <div className="flex justify-between items-center mb-6 border-b pb-4">
         <h2 className="text-2xl font-bold text-gray-800">
           {isEdit ? 'Edit Sell Opportunity' : 'Create Sell Opportunity'}
@@ -1070,7 +1075,7 @@ const SellOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead
             {/* 4. KILOMETERS AND PRICING */}
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
-                <DollarSign className="h-5 w-5 mr-2" />
+                <IndianRupee className="h-5 w-5 mr-2" />
                 Kilometers & Pricing
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

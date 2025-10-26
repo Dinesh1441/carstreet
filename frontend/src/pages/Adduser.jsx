@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-
+import { useAuth } from '../contexts/AuthContext';
+import { toast } from 'react-toastify';
 
 
 function AddUser() {
   const navigate = useNavigate();
+  const {token} = useAuth();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'user',
+    role: 'Sales Executive',
     status: 'Active',
     profileImage: null
   });
@@ -137,22 +139,25 @@ function AddUser() {
         submitData.append('profileImage', formData.profileImage);
       }
 
-      const response = await axios.post(`${backendUrl}/api/users/add`, submitData, {
+      const response = await axios.post(`${backendUrl}/api/users/add`,  submitData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
         }
       });
       
       if (response.status === 201) {
-        alert('User created successfully!');
+        toast.success('User created successfully');
         navigate('/users');
       }
     } catch (error) {
       console.error('Error creating user:', error);
       if (error.response?.data?.message) {
-        alert(`Error: ${error.response.data.message}`);
+        toast.error(error.response.data.message);
+        // alert(`Error: ${error.response.data.message}`);
       } else {
-        alert('An error occurred while creating the user.');
+        // alert('An error occurred while creating the user.');
+        toast.error('An error occurred while creating the user.');
       }
     } finally {
       setIsSubmitting(false);
