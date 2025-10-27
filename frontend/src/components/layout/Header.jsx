@@ -20,6 +20,7 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
   const dropdownRef = useRef(null);
 
   const backend_url = import.meta.env.VITE_BACKEND_URL;
+  const frontend_url = import.meta.env.VITE_FRONTEND_URL;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -61,7 +62,7 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
             <h1 className="text-xl font-bold text-gray-800">CRMPro</h1>
             <p className="text-xs text-gray-500 -mt-1">Customer Relationship Management</p>
           </div>
-          <img src="http://localhost:5173/src/assets/img/carstreet.png" className=" md:h-8 h-6" alt="" />
+          <img src={`${frontend_url}/src/assets/img/carstreet.png`} className=" md:h-8 h-6" alt="" />
         </div>
       </div>
       
