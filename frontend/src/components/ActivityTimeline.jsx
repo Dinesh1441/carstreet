@@ -26,11 +26,13 @@ import {
   BarChart3,
   Download,
   Share2,
-  MoreVertical
+  MoreVertical,
+  Loader
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
+import { useSocket } from '../hooks/useSocket';
 
 // Custom debounce hook
 const useDebounce = (value, delay) => {
@@ -58,7 +60,6 @@ const ActivityTimeline = ({ leadId }) => {
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [hoveredActivity, setHoveredActivity] = useState(null);
-  const { token } = useAuth();
   
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -68,8 +69,19 @@ const ActivityTimeline = ({ leadId }) => {
     itemsPerPage: 10
   });
   
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+  // Socket connection
+  const { socket: socketInstance, isConnected: socketConnected } = useSocket(backendUrl);
+  const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  // Set socket and connection status
+  useEffect(() => {
+    setSocket(socketInstance);
+    setIsConnected(socketConnected);
+  }, [socketInstance, socketConnected]);
 
   // Use debounced search
   const debouncedSearchTerm = useDebounce(searchInput, 500);
@@ -213,6 +225,78 @@ const ActivityTimeline = ({ leadId }) => {
       setLoading(false);
     }
   };
+
+  // ✅ Listen for socket events for real-time activity updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleActivityCreated = (data) => {
+      console.log('🆕 New activity received:', data);
+      
+      // Check if the activity belongs to the current lead
+      if (data.activity.leadId === leadId) {
+        setActivities(prev => [data.activity, ...prev]);
+        
+        // Show notification
+        toast.info(`New ${data.activity.type} activity added`);
+        
+        // Update pagination
+        setPagination(prev => ({
+          ...prev,
+          totalItems: prev.totalItems + 1
+        }));
+      }
+    };
+
+    const handleActivityUpdated = (data) => {
+      console.log('📝 Activity updated:', data);
+      
+      // Update the specific activity in state
+      setActivities(prev => 
+        prev.map(activity => 
+          activity._id === data.activity._id ? data.activity : activity
+        )
+      );
+    };
+
+    const handleActivityDeleted = (data) => {
+      console.log('🗑️ Activity deleted:', data);
+      
+      // Remove activity from state
+      setActivities(prev => 
+        prev.filter(activity => activity._id !== data.activityId)
+      );
+      
+      // Update pagination
+      setPagination(prev => ({
+        ...prev,
+        totalItems: Math.max(0, prev.totalItems - 1)
+      }));
+    };
+
+    // Join lead-specific room for targeted updates
+    if (leadId) {
+      socket.emit('join_lead_room', leadId);
+    }
+
+    // Register event listeners
+    socket.on('activity_created', handleActivityCreated);
+    socket.on('activity_updated', handleActivityUpdated);
+    socket.on('activity_deleted', handleActivityDeleted);
+
+    // ✅ Cleanup event listeners on unmount or socket change
+    return () => {
+      if (socket) {
+        socket.off('activity_created', handleActivityCreated);
+        socket.off('activity_updated', handleActivityUpdated);
+        socket.off('activity_deleted', handleActivityDeleted);
+        
+        if (leadId) {
+          socket.emit('leave_lead_room', leadId);
+        }
+      }
+    };
+  }, [socket, leadId]);
 
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -456,6 +540,16 @@ const ActivityTimeline = ({ leadId }) => {
 
   return (
     <div className="space-y-6">
+      {/* Real-time status indicator */}
+      {isConnected && (
+        <div className="fixed top-4 right-4 z-50 hidden">
+          <div className="flex items-center space-x-2 bg-green-500 text-white px-3 py-2 rounded-lg shadow-lg">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            <span className="text-sm font-medium">Live Updates</span>
+          </div>
+        </div>
+      )}
+
       {/* Enhanced Header */}
       <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-3 border border-gray-200">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -573,7 +667,7 @@ const ActivityTimeline = ({ leadId }) => {
             <div key={date} className="relative">
               {/* Enhanced Date Header */}
               <div className="flex items-center mb-8">
-                <div className="flex items-center space-x-3 bg-white px-4 py-2  rounded-full shadow-sm border border-gray-200">
+                <div className="flex items-center space-x-3 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200">
                   <Calendar className="h-5 w-5 text-blue-500" />
                   <span className="text-sm font-semibold text-gray-700">{date}</span>
                   <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
@@ -626,20 +720,6 @@ const ActivityTimeline = ({ leadId }) => {
 
                         {/* Content */}
                         <div className="flex-1 min-w-0">
-                          {/* <div className="flex items-start justify-between">
-                            <div className="flex items-center space-x-2">
-                           
-                            </div>
-                            
-                          
-                            <div className="flex items-center space-x-1 text-xs text-gray-500">
-                              <Clock className="h-3 w-3" />
-                              <span>{formatTime(activity.createdAt)}</span>
-                              <span className="text-gray-400">•</span>
-                              <span>{formatRelativeTime(activity.createdAt)}</span>
-                            </div>
-                          </div> */}
-                      
                           {/* Activity content */}
                           {renderActivityContent(activity)}
 

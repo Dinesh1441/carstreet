@@ -64,6 +64,17 @@ const OpportunityDetails = ({ leadId }) => {
 
   const backend_url = import.meta.env.VITE_BACKEND_URL;
 
+
+   // Socket connection
+    const { socket: socketInstance, isConnected: socketConnected } = useSocket(backendUrl);
+    const [socket, setSocket] = useState(null);
+    const [isConnected, setIsConnected] = useState(false);
+
+    useEffect(() => {
+        setSocket(socketInstance);
+        setIsConnected(socketConnected);
+      }, [socketInstance, socketConnected]);
+
   // Fetch all opportunities for the lead
   const fetchOpportunities = async () => {
     try {

@@ -75,6 +75,8 @@ export const getActivities = async (req, res) => {
 
     // Build filter object
     const filter = {};
+
+    
     
     if (user) {
       if (!mongoose.Types.ObjectId.isValid(user)) {
@@ -99,6 +101,7 @@ export const getActivities = async (req, res) => {
       }
       filter.leadId = leadId;
     }
+    
     
     // Date range filter
     if (startDate || endDate) {
@@ -126,6 +129,8 @@ export const getActivities = async (req, res) => {
 
     // Get total count for pagination
     const total = await Activity.countDocuments(filter);
+
+  
 
     res.status(200).json({
       success: true,

@@ -139,6 +139,7 @@ export const addLead = async (req, res) => {
       type: 'lead_created',
       content: `New lead "${name}" created and ${assignedUserId ? `assigned to ${assignedUser?.username || 'user'}` : 'not assigned'}`,
       contentId: savedLead._id,
+      leadId: savedLead._id,
       metadata: leadData
     });
 
@@ -337,7 +338,7 @@ export const updateLead = async (req, res) => {
       id,
       updateData,
       { new: true, runValidators: true }
-    ).populate('assignedTo', 'name email username');
+    ).populate('assignedTo', 'username email username');
 
     if (!updatedLead) {
       return res.status(404).json({
@@ -354,9 +355,18 @@ export const updateLead = async (req, res) => {
       metadata: updateData,
       content: `Lead updated "${updatedLead.name} ${updatedLead.lastName}"`,
       contentId: updatedLead._id,
-      metadata: updateData
+      leadId: updatedLead._id,
+      metadata: {
+        name: updatedLead.name,
+        lastName: updatedLead.lastName,
+        Email: updatedLead.email,
+        phone: updatedLead.phone,
+        status : updatedLead.status,
+        assignedTo : updatedLead.assignedTo?.username
+      }
     });
 
+  
     res.status(200).json({
       status: "success",
       message: "Lead updated successfully",

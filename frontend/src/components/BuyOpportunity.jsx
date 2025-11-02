@@ -4,6 +4,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify'; 
 import { useAuth } from '../contexts/AuthContext';
 
+
 const BuyOpportunity = ({ onClose, onSuccess, opportunity, isEdit = false, lead }) => {
   const [formData, setFormData] = useState({
     name: opportunity?.name || lead?.name || '',

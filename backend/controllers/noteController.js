@@ -1,4 +1,5 @@
 import Note from '../models/noteModel.js';
+import Activity from '../models/activityModel.js';
 
 export const allNotes = async (req, res) => {
     try {
@@ -32,6 +33,26 @@ export const addNote = async (req, res) => {
             createdBy
         });
         await newNote.save();
+
+        const newNoteData = await Note.findById(newNote._id)
+            .populate('createdBy', 'username email')
+            .populate('leadId', 'name email phone');
+
+        const activity = new Activity({
+            user: createdBy,
+            type: 'note',
+            content: "New Note Added",
+            contentId: newNote._id,
+            leadId: leadId,
+            metadata: { 
+                name : newNoteData.leadId.name,
+                email : newNoteData.leadId.email,
+                phone : newNoteData.leadId.phone,
+                createdBy : newNoteData.createdBy?.username,
+                // note : noteText
+             }
+        });
+        await activity.save();
         res.status(201).json({
             status: "success",
             data: newNote
@@ -49,6 +70,25 @@ export const updateNote = async (req, res) => {
             { leadid, noteText, attachments },  
             { new: true }
         );  
+
+
+
+        
+        const activity = new Activity({
+            user: updatedNote.createdBy,
+            type: 'Note Updated',
+            content: noteText,
+            contentId: updatedNote._id,
+            leadId: leadid,
+            metadata: { 
+                name : updatedNote.leadId.name,
+                email : updatedNote.leadId.email,
+                phone : updatedNote.leadId.phone,
+                createdBy : updatedNote.createdBy?.username,
+                // note : noteText
+             }
+        })
+        await activity.save();  
         if (!updatedNote) {
             return res.status(404).json({ message: "Note not found" });
         }

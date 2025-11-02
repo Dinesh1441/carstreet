@@ -143,7 +143,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
     //   ]
     // },
      { id: 'users', roles: ['Super Admin'], label: 'User Management', icon: <Users size={16} />, path: '/users' },
-     { id: 'api', roles: ['Super Admin'], label: 'APIs Management', icon: <Users size={16} />, path: '/api' },
+     { id: 'apis', roles: ['Super Admin'], label: 'APIs Management', icon: <Users size={16} />, path: '/apis' },
    
   ];
 

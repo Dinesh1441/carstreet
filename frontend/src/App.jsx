@@ -164,7 +164,7 @@ const ProtectedRoutes = () => {
           <Route path="/opportunity/rto" element={<RtoOpportunityPage />} />
           <Route path="/opportunity/sale" element={<SellOpportunityPage />} />
           <Route path="/deliveryforms" element={<DeliveryFormsPage />} />
-          <Route path="/api" element={<ManageApi />} />
+          <Route path="/apis" element={<ManageApi />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Layout>

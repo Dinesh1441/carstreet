@@ -42,7 +42,7 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [ `${process.env.FRONTEND_URL}` || "http://localhost:5000", "http://localhost:5000" ], // Add the frontend URL here, process.env.FRONTEND_URL || "http://localhost:3000",
     methods: ["GET", "POST"], 
     credentials: true
   },
@@ -76,6 +76,7 @@ app.get('/', (req, res) => {
 
 // Initialize socket handling
 socketHandler(io);
+global.io = io;
 
 // app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

@@ -52,3 +52,5 @@ export const deleteMake = async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Server Error', error });
     }
 };
+
+

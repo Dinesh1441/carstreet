@@ -215,7 +215,7 @@ export const loginUser = async (req, res) => {
             });
         }
 
-        if (user.status !== 'Active') {
+        if (user.status === 'Inactive') {
             return res.status(403).json({
                 status: "fail",
                 message: "User account is not active"

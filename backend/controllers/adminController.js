@@ -8,7 +8,7 @@ export const getAssignmentStats = async (req, res) => {
     const currentState = leadAssignmentService.getAssignmentState();
     
     res.status(200).json({
-      status: "success",
+      status: "success", 
       data: {
         users: stats,
         roundRobinState: currentState,

@@ -695,7 +695,7 @@ import mongoose from "mongoose";
 // Create a new buy opportunity
 export const createBuyOpportunity = async (req, res) => {
     try {
-        
+          const io = req.app.get('io');     
         const {
             name,
             email,
@@ -822,6 +822,14 @@ export const createBuyOpportunity = async (req, res) => {
         });
 
         await activity.save();
+
+         if (io) {
+            io.emit('opportunity_created', {
+                opportunity: populatedOpportunity,
+                message: 'New lead created'
+            });
+            // console.log('Socket event emitted: lead_created');
+            }
 
         res.status(201).json({
             status: "success",
